@@ -3,8 +3,9 @@
    ========================================================================== */
 
 :root {
-    --bg-main: #0D0D12;
-    --bg-top-radial: #1A1A2E;
+    --bg-main: #070B08;        /* preto com um toque de verde */
+    --bg-top-radial: #0E2A18;  /* verde escuro no alto da tela */
+    --brand-green: #2BE86B;    /* o verde do logo */
     --bg-surface: #1E1E1E;
     --bg-card: #242432;
     --bg-input: #2C2C2C;
@@ -84,7 +85,12 @@ body.app-body {
     height: 1080px;
     display: flex;
     flex-direction: column;
-    background: radial-gradient(circle at 50% 0%, var(--bg-top-radial) 0%, var(--bg-main) 75%);
+    /* Brilho verde no topo descendo para o preto. O rgba(...,0) é proposital:
+       "transparent" vira preto transparente em WebKit antigo (Tizen) e cria
+       uma faixa acinzentada no meio do degradê. */
+    background:
+        radial-gradient(70% 50% at 50% 0%, rgba(43, 232, 107, 0.16) 0%, rgba(43, 232, 107, 0) 70%),
+        radial-gradient(circle at 50% 0%, var(--bg-top-radial) 0%, var(--bg-main) 75%);
     position: relative;
     z-index: 2;
 }
@@ -107,8 +113,10 @@ body.app-body {
     gap: 12px;
 }
 
-.header-logo-icon {
-    font-size: 32px;
+.header-logo-img {
+    height: 58px;
+    width: auto;
+    display: block;
 }
 
 .header-title {
@@ -1262,4 +1270,62 @@ body.in-player-mode {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: #FFF;
+}
+
+/* ==========================================================================
+   SITUAÇÃO DA LISTA NO PROVEDOR
+   Tela de "sem conteúdo" e recado nas configurações. Só informativo: o app
+   nunca bloqueia por causa da validade da lista — isso é com o provedor.
+   ========================================================================== */
+
+.list-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 1100px;
+    margin: 60px auto;
+    padding: 50px 60px;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+}
+
+.list-empty-icon {
+    font-size: 72px;
+    line-height: 1;
+    margin-bottom: 24px;
+}
+
+.list-empty-title {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text-white);
+    margin: 0 0 16px;
+}
+
+.list-empty-msg {
+    font-size: 26px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    margin: 0 auto;
+    max-width: 850px;
+}
+
+.settings-note {
+    margin-top: 18px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    background: rgba(229, 9, 20, 0.12);
+    border: 1px solid rgba(229, 9, 20, 0.3);
+    color: #FF8F8F;
+    font-size: 20px;
+    line-height: 1.45;
+}
+
+/* Logo na tela de ativação (acima do título de status). */
+.activation-logo {
+    width: 360px;
+    height: auto;
+    display: block;
+    margin: 0 auto 30px;
 }

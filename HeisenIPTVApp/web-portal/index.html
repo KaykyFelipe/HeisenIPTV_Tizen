@@ -2,118 +2,416 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HeisenIPTV - Ativação</title>
-    <!-- Fonts -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0b0f">
+    <meta name="description" content="Ative sua Smart TV, gerencie suas listas IPTV e sua assinatura HeisenIPTV.">
+    <title>HeisenIPTV — Ativação e Assinatura</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1 class="logo">HeisenIPTV</h1>
-            <p class="subtitle">Gerencie sua lista de canais remotamente</p>
-        </header>
+<div class="bg-glow" aria-hidden="true"></div>
 
-        <main class="card">
-            <div class="tabs">
-                <button class="tab-btn active" data-target="xtream">Xtream Codes</button>
-                <button class="tab-btn" data-target="m3u">Link M3U</button>
-                <button class="tab-btn" data-target="license" style="color: #e50914;">Renovar Licença</button>
+<div class="wrap">
+
+    <header class="brand">
+        <h1 class="brand-logo">
+            <img src="logo.png" alt="HeisenIPTV" width="340" height="281" class="brand-img">
+        </h1>
+        <p class="brand-tagline">Ative sua TV, gerencie suas listas e sua assinatura</p>
+    </header>
+
+    <!-- ==================== TELA 1: ACESSO ==================== -->
+    <section id="screen-access" class="screen is-visible">
+
+        <ol class="steps">
+            <li><span class="step-num">1</span><span>Abra o app <b>HeisenIPTV</b> na sua Smart TV</span></li>
+            <li><span class="step-num">2</span><span>Anote o <b>MAC Address</b> e o <b>Device Key</b> que aparecem na tela</span></li>
+            <li><span class="step-num">3</span><span>Informe os dois abaixo para liberar o painel</span></li>
+        </ol>
+
+        <form id="form-access" class="card" novalidate>
+            <h2 class="card-title">Acessar meu dispositivo</h2>
+
+            <div class="field">
+                <label for="mac-address">MAC Address da TV</label>
+                <input type="text" id="mac-address" placeholder="00:11:22:AA:BB:CC" maxlength="17"
+                       autocomplete="off" autocapitalize="characters" spellcheck="false" required>
+                <p class="hint">Aparece na tela de ativação da TV e em Configurações.</p>
             </div>
 
-            <form id="upload-form">
-                <!-- Identificação da TV -->
-                <div class="section-title">Dados da TV</div>
-                <div class="input-group row">
-                    <div class="input-field">
-                        <label>MAC Address da TV</label>
-                        <input type="text" id="mac-address" placeholder="EX: 00:11:22:AA:BB:CC" required maxlength="17">
-                    </div>
-                    <div class="input-field">
-                        <label>Device Key</label>
-                        <input type="text" id="device-key" placeholder="EX: 123456" required maxlength="6">
+            <div class="field">
+                <label for="device-key">Device Key</label>
+                <input type="text" id="device-key" placeholder="6 dígitos" maxlength="6"
+                       inputmode="numeric" autocomplete="off" required>
+                <p class="hint">Código de 6 dígitos exibido logo abaixo do MAC.</p>
+            </div>
+
+            <div id="access-msg" class="msg" role="alert" hidden></div>
+
+            <button type="submit" id="btn-access" class="btn btn-primary btn-block">
+                <span class="btn-label">Acessar painel</span>
+            </button>
+        </form>
+
+        <p class="foot-note">
+            Ainda não abriu o app na TV? Instale e abra o HeisenIPTV primeiro — é ele que gera seu MAC e sua chave.
+        </p>
+
+        <!-- ==================== PRÉVIAS DA INTERFACE DA TV =====================
+             Os quadros abaixo são recriações em HTML/CSS da interface real do app
+             (mesmas cores e mesmo layout do style.css da TV). Não baixam imagem
+             nenhuma e ficam nítidos em qualquer tela.
+
+             Para usar um print de verdade no lugar de um quadro, basta trocar o
+             conteúdo da .tv-screen por:
+                 <img src="shots/dashboard.jpg" alt="Tela inicial do HeisenIPTV">
+             (o CSS já ajusta a imagem para preencher a tela em 16:9)
+        ===================================================================== -->
+        <section class="showcase">
+            <h2 class="showcase-title">Veja como fica na sua TV</h2>
+            <p class="showcase-sub">Feito para o controle remoto: navegação direta, capas grandes e zero menu confuso.</p>
+
+            <div class="shots" id="shots">
+
+                <!-- 1. TELA INICIAL -->
+                <figure class="shot">
+                    <div class="tv"><div class="tv-screen">
+                        <div class="mk">
+                            <div class="mk-head">
+                                <div class="mk-brand"><span>📺</span> HeisenIPTV</div>
+                                <div class="mk-head-right"><span class="mk-clock">21:34</span><span class="mk-avatar">👤</span></div>
+                            </div>
+                            <div class="mk-body">
+                                <div class="mk-row mk-row-top">
+                                    <div class="mk-tile mk-live"><span class="mk-tile-ic">📺</span><span class="mk-tile-tt">TV AO VIVO</span></div>
+                                    <div class="mk-tile mk-movies"><span class="mk-tile-ic">🎬</span><span class="mk-tile-tt">FILMES</span></div>
+                                    <div class="mk-tile mk-series"><span class="mk-tile-ic">🍿</span><span class="mk-tile-tt">SÉRIES</span></div>
+                                </div>
+                                <div class="mk-row mk-row-bottom">
+                                    <div class="mk-tile mk-settings"><span class="mk-tile-ic">⚙️</span><span class="mk-tile-tt">CONFIGURAÇÕES</span></div>
+                                </div>
+                            </div>
+                            <div class="mk-foot"><span>Expiração: Ilimitado</span><span>Usuário logado</span></div>
+                        </div>
+                    </div></div>
+                    <figcaption>Tela inicial — tudo a um clique do controle</figcaption>
+                </figure>
+
+                <!-- 2. FILMES E SÉRIES -->
+                <figure class="shot">
+                    <div class="tv"><div class="tv-screen">
+                        <div class="mk">
+                            <div class="mk-hero">
+                                <div class="mk-hero-art"></div>
+                                <div class="mk-hero-info">
+                                    <span class="mk-hero-badge">HEISENIPTV ORIGINAL</span>
+                                    <span class="mk-hero-title">Noite Sem Fim</span>
+                                    <div class="mk-hero-meta"><b>98% relevante</b><span>2024</span><span>1h 52m</span><i>HD</i></div>
+                                    <p class="mk-hero-plot">Uma corrida contra o tempo nas ruas de uma cidade que nunca dorme.</p>
+                                    <span class="mk-hero-btn">▶ Assistir agora</span>
+                                </div>
+                            </div>
+                            <div class="mk-rail">
+                                <span class="mk-rail-tt">Em alta no Brasil</span>
+                                <div class="mk-posters">
+                                    <span class="mk-poster p1"></span><span class="mk-poster p2 is-on"></span>
+                                    <span class="mk-poster p3"></span><span class="mk-poster p4"></span>
+                                    <span class="mk-poster p5"></span><span class="mk-poster p6"></span>
+                                    <span class="mk-poster p7"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div></div>
+                    <figcaption>Filmes e séries com capas, sinopse e elenco</figcaption>
+                </figure>
+
+                <!-- 3. PLAYER AO VIVO -->
+                <figure class="shot">
+                    <div class="tv"><div class="tv-screen">
+                        <div class="mk mk-player">
+                            <div class="mk-scene"></div>
+                            <div class="mk-osd-top">
+                                <span class="mk-osd-back">←</span>
+                                <span class="mk-osd-name">Globo HD</span>
+                                <span class="mk-osd-live">AO VIVO</span>
+                                <span class="mk-osd-clock">21:34</span>
+                            </div>
+                            <div class="mk-osd-bottom">
+                                <div class="mk-epg"><span class="mk-epg-tag">AGORA:</span> Jornal Nacional</div>
+                                <div class="mk-keys">
+                                    <span><i>▲▼</i> Trocar canal</span>
+                                    <span><i>VOLTAR</i> Fechar</span>
+                                    <span><i class="red">●</i> Favorito</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div></div>
+                    <figcaption>Troca de canal pelas setas, sem sair do vídeo</figcaption>
+                </figure>
+
+                <!-- 4. LISTA DE CANAIS -->
+                <figure class="shot">
+                    <div class="tv"><div class="tv-screen">
+                        <div class="mk">
+                            <div class="mk-sub">
+                                <span class="mk-sub-back">← Categorias</span>
+                                <span class="mk-sub-tt">Abertos Brasil</span>
+                                <span class="mk-sub-count">142 itens</span>
+                            </div>
+                            <div class="mk-chan-grid">
+                                <div class="mk-chan is-on"><span class="mk-logo l1">G</span><span class="mk-chan-txt"><b>Globo HD</b><i>Jornal Nacional</i></span><span class="mk-heart on">❤</span></div>
+                                <div class="mk-chan"><span class="mk-logo l2">R</span><span class="mk-chan-txt"><b>Record HD</b><i>Cidade Alerta</i></span><span class="mk-heart">♡</span></div>
+                                <div class="mk-chan"><span class="mk-logo l3">S</span><span class="mk-chan-txt"><b>SBT HD</b><i>Programa Silvio Santos</i></span><span class="mk-heart">♡</span></div>
+                                <div class="mk-chan"><span class="mk-logo l4">B</span><span class="mk-chan-txt"><b>Band HD</b><i>Jogo Aberto</i></span><span class="mk-heart on">❤</span></div>
+                                <div class="mk-chan"><span class="mk-logo l5">C</span><span class="mk-chan-txt"><b>Cultura HD</b><i>Documentário</i></span><span class="mk-heart">♡</span></div>
+                                <div class="mk-chan"><span class="mk-logo l6">N</span><span class="mk-chan-txt"><b>News HD</b><i>Boletim 24h</i></span><span class="mk-heart">♡</span></div>
+                                <div class="mk-chan"><span class="mk-logo l7">R</span><span class="mk-chan-txt"><b>RedeTV! HD</b><i>Sessão de filmes</i></span><span class="mk-heart">♡</span></div>
+                                <div class="mk-chan"><span class="mk-logo l8">E</span><span class="mk-chan-txt"><b>Esportes HD</b><i>Rodada ao vivo</i></span><span class="mk-heart on">❤</span></div>
+                                <div class="mk-chan"><span class="mk-logo l9">D</span><span class="mk-chan-txt"><b>Documentos HD</b><i>Planeta Selvagem</i></span><span class="mk-heart">♡</span></div>
+                                <div class="mk-chan"><span class="mk-logo l10">K</span><span class="mk-chan-txt"><b>Kids HD</b><i>Desenhos clássicos</i></span><span class="mk-heart">♡</span></div>
+                            </div>
+                        </div>
+                    </div></div>
+                    <figcaption>Canais por categoria, com favoritos na tecla vermelha</figcaption>
+                </figure>
+
+            </div>
+
+            <!-- Bolinhas geradas pelo script, uma por prévia. -->
+            <div class="dots" id="shot-dots" aria-label="Navegar pelas prévias"></div>
+
+            <div class="feats-head">
+                <h2 class="showcase-title">Por que vale a pena ter o HeisenIPTV</h2>
+                <p class="showcase-sub">Você já tem a sua lista. O HeisenIPTV é o app que transforma ela numa experiência de TV de verdade.</p>
+            </div>
+
+            <ul class="feats">
+                <li class="feat">
+                    <span class="feat-ic">📱</span>
+                    <h3 class="feat-title">Ative pelo celular, sem digitar no controle</h3>
+                    <p class="feat-desc">Soletrar usuário e senha com as setas do controle é o pior momento de qualquer app de IPTV. Aqui você cadastra tudo pelo celular ou pelo computador e a TV carrega sozinha em segundos. Trocar de servidor depois leva o mesmo tempo.</p>
+                </li>
+
+                <li class="feat">
+                    <span class="feat-ic">📺</span>
+                    <h3 class="feat-title">Seus canais ao vivo, organizados</h3>
+                    <p class="feat-desc">A sua lista chega separada por categorias, com logo, nome do canal e o programa que está no ar. Troque de canal direto pelas setas sem sair do vídeo, e use a busca para achar qualquer canal pelo nome em vez de rolar centenas de linhas.</p>
+                </li>
+
+                <li class="feat">
+                    <span class="feat-ic">🎬</span>
+                    <h3 class="feat-title">Filmes e séries com cara de streaming</h3>
+                    <p class="feat-desc">Capas grandes, destaque na abertura, sinopse, elenco, ano e duração carregados automaticamente. As séries vêm separadas por temporada e episódio, do mesmo jeito que você já está acostumado nos aplicativos grandes.</p>
+                </li>
+
+                <li class="feat">
+                    <span class="feat-ic">⚡</span>
+                    <h3 class="feat-title">Player nativo da sua Samsung</h3>
+                    <p class="feat-desc">Feito para Smart TVs Samsung com Tizen, usando o AVPlay — o motor de vídeo da própria TV, com decodificação por hardware. Abre rápido, segura melhor o buffer e, se um stream engasga, o app troca de motor sozinho em vez de simplesmente travar.</p>
+                </li>
+
+                <li class="feat">
+                    <span class="feat-ic">⏩</span>
+                    <h3 class="feat-title">Avanço rápido que entende a pressa</h3>
+                    <p class="feat-desc">Segurando a seta, o salto vai acelerando: começa em 15 segundos e chega a três minutos por toque. Dá para atravessar um filme inteiro em poucos segundos e parar exatamente na cena que você queria.</p>
+                </li>
+
+                <li class="feat">
+                    <span class="feat-ic">⭐</span>
+                    <h3 class="feat-title">Favoritos na tecla vermelha</h3>
+                    <p class="feat-desc">Um toque no botão vermelho do controle e o canal entra na sua pasta de favoritos, que fica sempre no topo da lista. Eles ficam salvos na TV e continuam lá mesmo quando você troca de lista ou de servidor.</p>
+                </li>
+
+                <li class="feat">
+                    <span class="feat-ic">🔑</span>
+                    <h3 class="feat-title">Xtream Codes, M3U e várias listas</h3>
+                    <p class="feat-desc">Funciona com o que o seu provedor te entregou: login Xtream Codes ou link M3U/M3U8. Cadastre quantas listas quiser no portal e escolha qual fica ativa na TV — dá para manter a principal e uma reserva, prontas para trocar quando precisar.</p>
+                </li>
+
+                <li class="feat">
+                    <span class="feat-ic">💳</span>
+                    <h3 class="feat-title">Pague uma vez e esqueça</h3>
+                    <p class="feat-desc">São 7 dias de teste sem pedir cartão. Depois, R$ 29,90 no plano anual ou R$ 59,90 uma única vez no vitalício. Sem mensalidade, sem renovação automática e sem aquela cobrança que aparece na fatura quando você já nem lembrava.</p>
+                </li>
+            </ul>
+        </section>
+    </section>
+
+    <!-- ==================== TELA 2: PAINEL ==================== -->
+    <section id="screen-panel" class="screen">
+
+        <div class="device-bar">
+            <div class="device-id">
+                <span class="device-label">Dispositivo</span>
+                <span class="device-mac" id="panel-mac">--:--:--:--:--:--</span>
+            </div>
+            <button type="button" id="btn-logout" class="btn btn-ghost btn-sm">Sair</button>
+        </div>
+
+        <!-- ---------- ASSINATURA ---------- -->
+        <div class="card" id="card-subscription">
+            <h2 class="card-title">Assinatura</h2>
+
+            <div class="status" id="status-box">
+                <div class="status-head">
+                    <span class="status-dot" id="status-dot"></span>
+                    <div class="status-texts">
+                        <h3 class="status-title" id="status-title">Verificando…</h3>
+                        <p class="status-desc" id="status-desc">Consultando o servidor.</p>
                     </div>
                 </div>
 
-                <!-- Dados Xtream -->
-                <div id="xtream-fields" class="form-section active">
-                    <div class="section-title">Dados do Servidor (Xtream)</div>
-                    <div class="input-group">
-                        <label>URL do Servidor (com http:// e porta)</label>
-                        <input type="url" id="x-url" placeholder="Ex: http://meuservidor.com:8080" value="http://">
-                    </div>
-                    <div class="input-group row">
-                        <div class="input-field">
-                            <label>Usuário</label>
-                            <input type="text" id="x-user" placeholder="Seu usuário">
-                        </div>
-                        <div class="input-field">
-                            <label>Senha</label>
-                            <input type="password" id="x-pass" placeholder="Sua senha">
-                        </div>
+                <div class="status-meter" id="status-meter" hidden>
+                    <div class="meter-track"><div class="meter-fill" id="meter-fill"></div></div>
+                    <div class="meter-legend">
+                        <span id="meter-left">—</span>
+                        <span id="meter-total">7 dias de teste</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Dados M3U -->
-                <div id="m3u-fields" class="form-section">
-                    <div class="section-title">Link da Lista M3U</div>
-                    <div class="input-group">
-                        <label>URL da Lista (.m3u)</label>
-                        <input type="url" id="m-url" placeholder="http://meuservidor.com/get.php?username=...&type=m3u_plus">
-                    </div>
+            <div id="plans-area" hidden>
+                <h3 class="section-title" id="plans-title">Escolha seu plano</h3>
+
+                <div class="plans" role="radiogroup" aria-label="Planos disponíveis">
+                    <button type="button" class="plan" data-plan="anual" role="radio" aria-checked="false">
+                        <span class="plan-name">Anual</span>
+                        <span class="plan-price"><i>R$</i>29<sup>,90</sup></span>
+                        <span class="plan-cycle">por 12 meses</span>
+                        <ul class="plan-perks">
+                            <li>Acesso completo por 1 ano</li>
+                            <li>Todas as listas e favoritos</li>
+                            <li>Suporte por e-mail</li>
+                        </ul>
+                        <span class="plan-check" aria-hidden="true"></span>
+                    </button>
+
+                    <button type="button" class="plan plan-featured" data-plan="vitalicio" role="radio" aria-checked="false">
+                        <span class="plan-badge">Pagamento único</span>
+                        <span class="plan-name">Vitalício</span>
+                        <span class="plan-price"><i>R$</i>59<sup>,90</sup></span>
+                        <span class="plan-cycle">uma vez, sem renovação</span>
+                        <ul class="plan-perks">
+                            <li>Acesso permanente</li>
+                            <li>Todas as listas e favoritos</li>
+                            <li>Se paga em 2 anos</li>
+                        </ul>
+                        <span class="plan-check" aria-hidden="true"></span>
+                    </button>
                 </div>
 
-                <!-- Renovar Licença -->
-                <div id="license-fields" class="form-section">
-                    <div class="section-title" style="color: #e50914;">Status da Licença</div>
-                    <p style="color: #aaa; margin-bottom: 20px; font-size: 14px;">Para consultar e renovar, preencha apenas o seu MAC Address acima e clique no botão abaixo.</p>
-                    
-                    <button type="button" id="btn-check-license" class="btn-primary" style="background: #333; margin-bottom: 20px;">Consultar Status</button>
-                    
-                    <div id="license-status-box" style="display: none; padding: 20px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid #444; margin-bottom: 20px;">
-                        <h3 id="lic-status-title" style="margin-bottom: 10px;">Status: Buscando...</h3>
-                        <p id="lic-status-desc" style="color: #aaa; font-size: 14px;"></p>
-                    </div>
-
-                    <div id="payment-options" style="display: none;">
-                        <div class="section-title">Escolha seu Plano</div>
-                        
-                        <!-- Novo campo de E-mail para Pagamento -->
-                        <div class="input-group" style="margin-bottom: 20px;">
-                            <label>E-mail (Para receber a confirmação de pagamento)</label>
-                            <input type="email" id="buyer-email" placeholder="seu@email.com" style="width: 100%;">
-                        </div>
-
-                        <div style="display: flex; gap: 15px;">
-                            <button type="button" class="btn-primary btn-pay" data-plan="anual" style="flex: 1; font-size: 16px;">
-                                <div style="font-size: 24px; font-weight: 800;">R$ 29,90</div>
-                                <div>Licença Anual</div>
-                            </button>
-                            <button type="button" class="btn-primary btn-pay" data-plan="vitalicio" style="flex: 1; font-size: 16px; background-color: #2ecc71;">
-                                <div style="font-size: 24px; font-weight: 800;">R$ 59,90</div>
-                                <div>Licença Vitalícia</div>
-                            </button>
-                        </div>
-                    </div>
+                <div class="field field-tight">
+                    <label for="buyer-email">E-mail para a confirmação</label>
+                    <input type="email" id="buyer-email" placeholder="seu@email.com"
+                           inputmode="email" autocomplete="email" spellcheck="false">
                 </div>
 
-                <div id="message-box" class="message hidden"></div>
+                <div id="pay-msg" class="msg" role="alert" hidden></div>
 
-                <button type="submit" id="btn-submit" class="btn-primary">Ativar Dispositivo</button>
-            </form>
-        </main>
-        
-        <footer>
-            &copy; 2026 HeisenIPTV. Todos os direitos reservados.
-        </footer>
+                <button type="button" id="btn-pay" class="btn btn-primary btn-block" disabled>
+                    <span class="btn-label">Selecione um plano</span>
+                </button>
+                <p class="pay-note">Pagamento processado pelo Mercado Pago. A TV libera sozinha após a confirmação.</p>
+            </div>
+        </div>
+
+        <!-- ---------- LISTAS ---------- -->
+        <div class="card">
+            <div class="card-head">
+                <h2 class="card-title">Minhas listas</h2>
+                <span class="counter" id="pl-counter">0</span>
+            </div>
+
+            <div id="pl-list" class="pl-list"></div>
+
+            <div id="pl-empty" class="empty" hidden>
+                <span class="empty-icon">📡</span>
+                <p class="empty-title">Nenhuma lista cadastrada</p>
+                <p class="empty-desc">Adicione uma lista Xtream Codes ou um link M3U para a TV carregar os canais.</p>
+            </div>
+
+            <button type="button" id="btn-add-playlist" class="btn btn-outline btn-block">+ Adicionar lista</button>
+        </div>
+
+        <p class="foot-note">
+            A TV verifica o servidor a cada poucos segundos — depois de ativar uma lista, ela carrega sozinha.
+        </p>
+    </section>
+
+    <footer class="site-foot">&copy; 2026 HeisenIPTV</footer>
+</div>
+
+<!-- ==================== MODAL: LISTA ==================== -->
+<div id="pl-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="pl-modal-title">
+        <div class="modal-head">
+            <h2 id="pl-modal-title" class="card-title">Adicionar lista</h2>
+            <button type="button" class="modal-x" data-close aria-label="Fechar">×</button>
+        </div>
+
+        <form id="form-playlist" novalidate>
+            <div class="segmented" role="tablist">
+                <button type="button" class="seg-btn is-on" data-type="xtream" role="tab">Xtream Codes</button>
+                <button type="button" class="seg-btn" data-type="m3u" role="tab">Link M3U</button>
+            </div>
+
+            <div class="field">
+                <label for="pl-name">Nome da lista</label>
+                <input type="text" id="pl-name" placeholder="Ex: Servidor principal" maxlength="40" autocomplete="off">
+            </div>
+
+            <div id="fields-xtream" class="type-fields is-on">
+                <div class="field">
+                    <label for="x-url">URL do servidor</label>
+                    <input type="url" id="x-url" placeholder="http://servidor.com:8080"
+                           inputmode="url" autocomplete="off" spellcheck="false">
+                    <p class="hint">Inclua http:// e a porta, sem barra no final.</p>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="x-user">Usuário</label>
+                        <input type="text" id="x-user" placeholder="usuário" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="field">
+                        <label for="x-pass">Senha</label>
+                        <input type="password" id="x-pass" placeholder="••••••••" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div id="fields-m3u" class="type-fields">
+                <div class="field">
+                    <label for="m-url">URL da lista M3U</label>
+                    <input type="url" id="m-url" placeholder="http://servidor.com/get.php?username=…&amp;type=m3u_plus"
+                           inputmode="url" autocomplete="off" spellcheck="false">
+                    <p class="hint">Cole o link completo fornecido pelo seu provedor.</p>
+                </div>
+            </div>
+
+            <label class="switch">
+                <input type="checkbox" id="pl-activate" checked>
+                <span class="switch-box" aria-hidden="true"></span>
+                <span class="switch-text">Ativar esta lista na TV ao salvar</span>
+            </label>
+
+            <div id="pl-msg" class="msg" role="alert" hidden></div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" data-close>Cancelar</button>
+                <button type="submit" id="btn-save-playlist" class="btn btn-primary">
+                    <span class="btn-label">Salvar lista</span>
+                </button>
+            </div>
+        </form>
     </div>
+</div>
 
-    <!-- Firebase SDK (Compat) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="script.js"></script>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="script.js"></script>
 </body>
 </html>

@@ -98,8 +98,8 @@
         <!-- GLOBAL HEADER (Identical to Flutter _buildHeader) -->
         <header class="app-header">
             <div class="header-brand">
-                <div class="header-logo-icon">📺</div>
-                <span class="header-title">HeisenIPTV</span>
+                <!-- O logo já traz o nome; não repetir em texto ao lado. -->
+                <img src="images/logo.png" class="header-logo-img" alt="HeisenIPTV">
             </div>
             <div class="header-right">
                 <span id="header-clock" class="header-time">23:00   ago 17, 2026</span>
@@ -112,7 +112,10 @@
         <!-- VIEW: ACTIVATION SCREEN (MAC Authentication) -->
         <div id="view-activation" class="view-screen hidden" style="justify-content: center; align-items: center; background: #000;">
             <div class="activation-card">
-                <h1 class="brand-title" style="margin-bottom: 30px; font-size: 42px;">HeisenIPTV</h1>
+                <!-- O logo fica fora do .brand-title de propósito: o app.js
+                     reescreve o texto desse h1 quando a licença expira. -->
+                <img src="images/logo.png" class="activation-logo" alt="HeisenIPTV">
+                <h1 class="brand-title" style="margin-bottom: 30px; font-size: 42px;">Ative seu dispositivo</h1>
                 <p style="color: #999; font-size: 18px; margin-bottom: 40px; text-align: center; max-width: 600px;">
                     Seu dispositivo não possui uma lista ativa. Para continuar, acesse nosso portal no celular ou computador e vincule sua conta usando os dados abaixo:
                 </p>
@@ -438,6 +441,33 @@
                         <span>Proporção de Tela</span>
                         <span class="setting-pill">16:9 Automático</span>
                     </div>
+                </div>
+
+                <!-- Informações da lista do provedor. Só informativo: o app não
+                     bloqueia nada com base nisso, quem controla é o provedor. -->
+                <div class="settings-group-card">
+                    <h3>Informações da Lista</h3>
+                    <div class="settings-row">
+                        <span>Situação no provedor:</span>
+                        <span class="setting-pill" id="list-info-status">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span>Validade da lista:</span>
+                        <span class="setting-pill" id="list-info-exp">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span>Servidor:</span>
+                        <span class="text-dim" id="list-info-server">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span>Usuário:</span>
+                        <span class="text-dim" id="list-info-user">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span>Conexões em uso:</span>
+                        <span class="text-dim" id="list-info-conns">—</span>
+                    </div>
+                    <p class="settings-note" id="list-info-note" style="display: none;"></p>
                 </div>
 
                 <div class="settings-group-card">

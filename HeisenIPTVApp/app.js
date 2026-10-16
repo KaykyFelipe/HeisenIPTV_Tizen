@@ -34,6 +34,10 @@ var state = {
     netflixRailIndex: 0,
     netflixCardIndex: 0,
     
+    // Situação da lista no provedor ('none' | 'ok' | 'expired' | 'blocked' | 'auth' | 'empty')
+    listState: 'none',
+    listInfo: null,
+
     // Persistence
     favorites: JSON.parse(localStorage.getItem('flux_favorites') || '[]'),
     credentials: JSON.parse(localStorage.getItem('flux_credentials') || 'null'),
@@ -407,6 +411,149 @@ function loadStreams(streamsArray) {
     renderLiveCategories();
 }
 
+// ==========================================================================
+// SITUAÇÃO DA LISTA NO PROVEDOR
+// O HeisenIPTV é só o player: quem controla a validade da lista é o provedor
+// de IPTV do usuário. Aqui a gente apenas lê o que o painel informa e avisa —
+// sem bloquear nada, do mesmo jeito que IBO Player e IPTV Smarters fazem.
+// ==========================================================================
+
+function setListState(kind, info) {
+    state.listState = kind;
+    if (info) state.listInfo = info;
+    renderListInfoSettings();
+}
+
+/** Lê o user_info do Xtream e decide em que situação a lista está. */
+function readProviderInfo(domain, user, info) {
+    var expMs = 0;
+    if (info.exp_date) {
+        expMs = parseInt(info.exp_date, 10) * 1000;
+        if (isNaN(expMs)) expMs = 0;
+    }
+
+    var parsed = {
+        type: 'xtream',
+        server: domain.replace(/^https?:\/\//, ''),
+        user: user,
+        status: info.status || '',
+        expMs: expMs,
+        expLabel: expMs ? new Date(expMs).toLocaleDateString('pt-BR') : 'Não informada',
+        maxConnections: info.max_connections || '',
+        activeConnections: (info.active_cons === 0 || info.active_cons) ? String(info.active_cons) : '',
+        isTrial: String(info.is_trial) === '1',
+        checkedAt: new Date().toISOString()
+    };
+
+    var statusText = String(parsed.status).toLowerCase();
+    var kind = 'ok';
+
+    if (statusText && statusText !== 'active') {
+        // Painéis Xtream costumam usar Expired, Banned ou Disabled.
+        kind = (statusText === 'expired') ? 'expired' : 'blocked';
+    } else if (expMs && Date.now() > expMs) {
+        // Alguns painéis deixam "Active" mesmo depois da data já ter passado.
+        kind = 'expired';
+    }
+
+    setListState(kind, parsed);
+    publishListInfo(parsed, kind);
+}
+
+/** Mesma frase no toast, na tela vazia e nas configurações. */
+function listStateMessage() {
+    var info = state.listInfo;
+    if (state.listState === 'expired') {
+        return 'Sua lista venceu' + (info && info.expMs ? ' em ' + info.expLabel : '') +
+               '. Renove com o seu provedor para voltar a assistir.';
+    }
+    if (state.listState === 'blocked') {
+        return 'Sua lista está bloqueada pelo provedor' +
+               (info && info.status ? ' (' + info.status + ')' : '') +
+               '. Fale com quem vendeu a lista para você.';
+    }
+    if (state.listState === 'auth') {
+        return 'O provedor não aceitou o usuário e a senha da sua lista. ' +
+               'Confira os dados no portal ou fale com o seu provedor.';
+    }
+    if (state.listState === 'empty') {
+        return 'O provedor aceitou o seu acesso, mas não enviou nenhum canal. ' +
+               'Fale com o seu provedor.';
+    }
+    if (state.listState === 'none') {
+        return 'Nenhuma lista foi carregada neste aparelho.';
+    }
+    return '';
+}
+
+/** Bloco de "sem conteúdo" mostrado dentro das grades vazias. */
+function listEmptyStateHtml() {
+    var expired = (state.listState === 'expired' || state.listState === 'blocked');
+    return '<div class="list-empty-state">' +
+               '<div class="list-empty-icon">' + (expired ? '⚠️' : '📭') + '</div>' +
+               '<h3 class="list-empty-title">' +
+                   (expired ? 'Sua lista não está ativa' : 'Nada para mostrar aqui') +
+               '</h3>' +
+               '<p class="list-empty-msg">' + listStateMessage() + '</p>' +
+           '</div>';
+}
+
+/** Manda o status para o Firebase para o portal poder mostrar no celular. */
+function publishListInfo(info, kind) {
+    if (!macAddress || macAddress === 'CARREGANDO...') return;
+    var safeMac = macAddress.replace(/:/g, '');
+    fetch(firebaseDbUrl + '/devices/' + safeMac + '.json', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            listInfo: {
+                state: kind,
+                status: info.status || '',
+                expDate: info.expMs ? new Date(info.expMs).toISOString() : null,
+                maxConnections: info.maxConnections || '',
+                checkedAt: info.checkedAt
+            }
+        })
+    }).catch(function(e) {
+        console.warn('[HeisenIPTV] Não foi possível publicar o status da lista:', e);
+    });
+}
+
+/** Preenche o cartão "Informações da Lista" na tela de Configurações. */
+function renderListInfoSettings() {
+    var info = state.listInfo;
+    var set = function(id, text) {
+        var el = document.getElementById(id);
+        if (el) el.innerText = text;
+    };
+
+    var rotulos = {
+        ok: 'Ativa', expired: 'Vencida', blocked: 'Bloqueada',
+        auth: 'Acesso recusado', empty: 'Sem conteúdo', none: 'Nenhuma lista'
+    };
+
+    set('list-info-status', rotulos[state.listState] || '—');
+    set('list-info-server', info ? info.server : '—');
+    set('list-info-user', info && info.user ? info.user : '—');
+    set('list-info-exp', info && info.type === 'xtream' ? info.expLabel : 'Não informada (lista M3U)');
+    set('list-info-conns', info && info.maxConnections
+        ? info.activeConnections + ' de ' + info.maxConnections
+        : '—');
+
+    var statusEl = document.getElementById('list-info-status');
+    if (statusEl) {
+        statusEl.style.color = (state.listState === 'ok') ? '#46D369'
+                             : (state.listState === 'none') ? '' : '#E50914';
+    }
+
+    var noteEl = document.getElementById('list-info-note');
+    if (noteEl) {
+        var msg = (state.listState === 'ok') ? '' : listStateMessage();
+        noteEl.innerText = msg;
+        noteEl.style.display = msg ? 'block' : 'none';
+    }
+}
+
 function switchView(viewId) {
     state.currentView = viewId;
     var screens = document.querySelectorAll('.view-screen');
@@ -495,6 +642,12 @@ function renderLiveCategories() {
     if (!grid) return;
     grid.innerHTML = '';
 
+    // Sem nenhum canal carregado: explica o motivo em vez de deixar a tela vazia.
+    if (state.streams.length === 0) {
+        grid.innerHTML = listEmptyStateHtml();
+        return;
+    }
+
     for (var i = 0; i < state.categories.length; i++) {
         var cat = state.categories[i];
         var card = document.createElement('div');
@@ -547,6 +700,12 @@ function openCategoryChannels(categoryName, searchQuery) {
     var grid = document.getElementById('category-channels-grid');
     grid.innerHTML = '';
 
+    if (filtered.length === 0) {
+        grid.innerHTML = listEmptyStateHtml();
+        switchView('view-category-channels');
+        return;
+    }
+
     for (var j = 0; j < filtered.length; j++) {
         var ch = filtered[j];
         var card = document.createElement('div');
@@ -594,6 +753,20 @@ function openNetflixView(type) {
             filteredStreams.push(state.streams[i]);
         }
     }
+
+    var heroEl = document.getElementById('netflix-hero');
+
+    if (filteredStreams.length === 0) {
+        if (heroEl) heroEl.style.display = 'none';
+        railsContainer.innerHTML = listEmptyStateHtml();
+        switchView('view-netflix');
+        setTimeout(function() {
+            var back = document.querySelector('#view-netflix .btn-back');
+            if (back) setElementFocus(back);
+        }, 50);
+        return;
+    }
+    if (heroEl) heroEl.style.display = '';
 
     var groups = {};
     for (var j = 0; j < filteredStreams.length; j++) {
@@ -2033,19 +2206,39 @@ function loadM3U(url) {
         .then(function(r) { return r.text(); })
         .then(function(data) {
             var parsed = parseM3U(data);
+            // M3U não tem API de conta: o provedor não informa validade nenhuma.
+            var infoM3U = {
+                type: 'm3u',
+                server: url.replace(/^https?:\/\//, '').split('/')[0],
+                user: '',
+                status: '',
+                expMs: 0,
+                expLabel: 'Não informada',
+                maxConnections: '',
+                activeConnections: '',
+                checkedAt: new Date().toISOString()
+            };
+
             if (parsed.length > 0) {
                 localStorage.setItem('flux_m3u_url', url);
+                setListState('ok', infoM3U);
                 loadStreams(parsed);
                 showToast(parsed.length + ' canais carregados!');
                 switchView('view-dashboard');
                 focusDashboardItem(0);
             } else {
-                showToast('Nenhum canal encontrado.');
+                // Provedor devolveu a lista vazia — normalmente assinatura vencida.
+                setListState('empty', infoM3U);
+                loadStreams([]);
+                showToast(listStateMessage());
+                switchView('view-dashboard');
+                focusDashboardItem(0);
             }
         })
         .catch(function(err) {
             console.error(err);
-            showToast('Erro ao baixar lista.');
+            setListState('auth', null);
+            showToast('Não foi possível baixar a lista. Verifique o link com o seu provedor.');
         });
 }
 
@@ -2095,10 +2288,32 @@ function connectXtream(domain, user, pass) {
     fetch(authUrl)
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            if (data && data.user_info && data.user_info.auth === 1) {
+            var info = data && data.user_info;
+
+            // Credenciais erradas / recusadas pelo painel.
+            if (!info || info.auth !== 1) {
+                setListState('auth', null);
+                showToast(listStateMessage());
+                switchView('view-dashboard');
+                focusDashboardItem(0);
+                return;
+            }
+
+            // Guarda o que o provedor informou sobre a assinatura desta lista.
+            readProviderInfo(domain, user, info);
+
+            // Assinatura vencida/bloqueada: não adianta baixar nada.
+            if (state.listState !== 'ok') {
+                showToast(listStateMessage());
+                switchView('view-dashboard');
+                focusDashboardItem(0);
+                return;
+            }
+
+            if (state.listState === 'ok') {
                 localStorage.setItem('flux_credentials', JSON.stringify({ domain: domain, user: user, pass: pass }));
                 showToast('Login Xtream realizado com sucesso!');
-                
+
                 // Fetch Live, VOD, Series Streams and Series Categories
                 var urlLive = domain + '/player_api.php?username=' + user + '&password=' + pass + '&action=get_live_streams';
                 var urlVod = domain + '/player_api.php?username=' + user + '&password=' + pass + '&action=get_vod_streams';
@@ -2181,12 +2396,15 @@ function connectXtream(domain, user, pass) {
                     if (parsed.length > 0) {
                         loadStreams(parsed);
                         showToast(parsed.length + ' canais e filmes carregados!');
+                    } else {
+                        // Painel autorizou, mas não devolveu conteúdo nenhum.
+                        setListState('empty', state.listInfo);
+                        showToast(listStateMessage());
+                        loadStreams([]);
                     }
                     switchView('view-dashboard');
                     focusDashboardItem(0);
                 });
-            } else {
-                showToast('Usuário ou senha inválidos.');
             }
         })
         .catch(function(err) {
