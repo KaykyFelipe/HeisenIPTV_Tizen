@@ -187,6 +187,7 @@ window.addEventListener('load', function() {
 
     // 6. Global Keydown Listener
     window.addEventListener('keydown', handleRemoteKey, false);
+    document.addEventListener('visibilitychange', aoMudarVisibilidade, false);
 
     // 7. Focus Guard Interval
     setInterval(function() {
@@ -1436,6 +1437,54 @@ function showKeyFeedback(name) {
             badge.classList.add('hidden');
         }, 1000);
     }
+}
+
+/* ---------------------------------------------------------------------------
+   CICLO DE VIDA
+
+   A TV pode esconder o aplicativo a qualquer momento: entrar em espera, trocar
+   de entrada, abrir outro app. Continuar segurando o decodificador por hardware
+   nessa hora prende um recurso que a TV inteira disputa, e é causa conhecida de
+   reprovação na certificação da Samsung.
+
+   Filme e série apenas pausam, para o usuário voltar de onde parou. Canal ao
+   vivo é encerrado de fato: não existe "de onde parou", e manter o stream aberto
+   em segundo plano só gasta banda do cliente.
+   ------------------------------------------------------------------------- */
+var retomadaPendente = null;
+
+function aoEsconderApp() {
+    if (!player || state.currentView !== 'player-view' || !state.currentChannel) return;
+
+    var canal = state.currentChannel;
+    var ehVod = (canal.streamType === 'movie' || canal.streamType === 'series');
+
+    if (ehVod) {
+        retomadaPendente = { tipo: 'vod' };
+        try { player.pause(); } catch (e) {}
+    } else {
+        retomadaPendente = { tipo: 'live', canal: canal };
+        try { player.stop(); } catch (e) {}
+    }
+}
+
+function aoVoltarParaOApp() {
+    var r = retomadaPendente;
+    retomadaPendente = null;
+    if (!r || !player) return;
+    // O usuário pode ter saído do player enquanto o app estava escondido.
+    if (state.currentView !== 'player-view') return;
+
+    if (r.tipo === 'vod') {
+        try { player.resume(); } catch (e) {}
+        return;
+    }
+    if (r.canal) player.play(r.canal.url, true, true, false, r.canal.name);
+}
+
+function aoMudarVisibilidade() {
+    if (document.hidden) aoEsconderApp();
+    else aoVoltarParaOApp();
 }
 
 function handleRemoteKey(e) {
