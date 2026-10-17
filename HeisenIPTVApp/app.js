@@ -243,6 +243,7 @@ function initMacAuth() {
     if(setKey) setKey.innerText = deviceKey;
     
     switchView('view-activation');
+    focarBotaoDemo();
     
     // Registrar a TV no banco de dados e inicializar Trial se for novo
     var safeMac = macAddress.replace(/:/g, ''); 
@@ -279,6 +280,8 @@ function pollFirebaseAuth() {
         .then(function(data) {
             // Se o usuário está ativo no Firebase
             if (data && data.status === 'active' && data.playlist) {
+                // Não interromper quem está assistindo algo neste momento.
+                if (state.currentView === 'player-view') return;
                 
                 // --- LICENSE GUARD (TRIAL & EXPIRATION CHECK) ---
                 var isPaid = data.isPaid === true;
@@ -310,6 +313,7 @@ function pollFirebaseAuth() {
                     }
                     
                     switchView('view-activation');
+                    focarBotaoDemo();
                     
                     // Começa a fazer polling mais lento (a cada 15 segs) esperando o pagamento
                     macAuthTimer = setInterval(pollFirebaseAuth, 15000);
@@ -1718,7 +1722,23 @@ function handleNavigate(direction) {
         navigateVodGrid(direction);
     } else if (state.currentView === 'view-settings') {
         navigateSettings(direction);
+    } else if (state.currentView === 'view-activation') {
+        focarBotaoDemo();
     }
+}
+
+/** Único elemento focável da tela de ativação. */
+function focarBotaoDemo() {
+    var btn = document.getElementById('btn-activation-demo');
+    if (btn) setElementFocus(btn);
+}
+
+/** Entra no aplicativo com a lista de demonstração, sem precisar de ativação. */
+function entrarComDemo() {
+    loadStreams(DEMO_CHANNELS);
+    showToast(t('toast.demo_ok'));
+    switchView('view-dashboard');
+    focusDashboardItem(0);
 }
 
 // --------------------------------------------------------------------------
@@ -2213,6 +2233,11 @@ function handleBackKey() {
         switchView('view-vod-categories');
         var cats = document.querySelectorAll('#view-vod-categories .category-card');
         if (cats.length > 0) setElementFocus(cats[0]);
+    } else if (state.currentView === 'view-activation') {
+        // A ativação é a tela inicial de quem ainda não tem lista: voltar sai.
+        if (window.tizen && window.tizen.application) {
+            window.tizen.application.getCurrentApplication().exit();
+        }
     } else if (state.currentView !== 'view-dashboard') {
         switchView('view-dashboard');
         focusDashboardItem(state.dashIndex);
@@ -2350,14 +2375,10 @@ function attachHandlers() {
 
     // Demo Playlist
     var demoBtn = document.getElementById('btn-load-demo-playlist');
-    if (demoBtn) {
-        demoBtn.addEventListener('click', function() {
-            loadStreams(DEMO_CHANNELS);
-            showToast(t('toast.demo_ok'));
-            switchView('view-dashboard');
-            focusDashboardItem(0);
-        });
-    }
+    if (demoBtn) demoBtn.addEventListener('click', entrarComDemo);
+
+    var demoAtivBtn = document.getElementById('btn-activation-demo');
+    if (demoAtivBtn) demoAtivBtn.addEventListener('click', entrarComDemo);
 
     // Disconnect Playlist
     var discBtn = document.getElementById('btn-disconnect-playlist');
@@ -2425,6 +2446,7 @@ function attachHandlers() {
             }
             
             switchView('view-activation');
+            focarBotaoDemo();
             macAuthTimer = setInterval(pollFirebaseAuth, 5000);
         });
     }
