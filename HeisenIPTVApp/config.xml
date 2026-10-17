@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns:tizen="http://tizen.org/ns/widgets" xmlns="http://www.w3.org/ns/widgets" id="http://yourdomain/HeisenIPTVApp" version="1.0.2" viewmodes="maximized">
+<widget xmlns:tizen="http://tizen.org/ns/widgets" xmlns="http://www.w3.org/ns/widgets" id="http://heiseniptv.com/HeisenIPTVApp" version="1.0.2" viewmodes="maximized">
     <access origin="*" subdomains="true"></access>
     <tizen:application id="iTV5p1HNdk.HeisenIPTVApp" package="iTV5p1HNdk" required_version="2.3"/>
     <content src="index.html"/>
