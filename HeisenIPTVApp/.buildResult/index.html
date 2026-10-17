@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HeisenIPTV</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Tizen/Samsung Native APIs -->
+    <script type="text/javascript" src="$WEBAPIS/webapis/webapis.js"></script>
+</head>
+<body class="app-body" tabindex="0">
+
+    <!-- REAL-TIME REMOTE KEY DETECTION TOAST -->
+    <div id="key-feedback" class="key-feedback hidden">
+        🎮 <span id="key-name">OK</span>
+    </div>
+
+    <!-- FULLSCREEN VIDEO PLAYER VIEW -->
+    <div id="player-view" class="view-screen hidden">
+        <div id="video-container" class="video-container">
+            <video id="html5-video" class="html5-video" autoplay playsinline></video>
+            <object id="avplayer" type="application/avplayer" class="avplayer-object"></object>
+            
+            <!-- Video Loading Spinner -->
+            <div id="video-loader" class="video-loader hidden">
+                <div class="spinner"></div>
+                <p id="video-status-text" data-i18n="player.carregando">Carregando stream...</p>
+            </div>
+
+            <!-- Video Error Banner -->
+            <div id="video-error" class="video-error hidden">
+                <div class="error-icon">⚠️</div>
+                <h3 id="video-error-title" data-i18n="player.erro_titulo">Erro de Reprodução</h3>
+                <p id="video-error-msg" data-i18n="player.erro_msg">Não foi possível carregar o fluxo de vídeo.</p>
+            </div>
+        </div>
+
+        <!-- Player OSD Top Bar -->
+        <div id="player-top-bar" class="player-top-bar">
+            <button id="btn-player-back" class="icon-btn focusable" data-action="player-back" tabindex="0">
+                <span class="icon">←</span>
+            </button>
+            <div class="player-title-box">
+                <h2 id="player-channel-name" data-i18n="player.canal_ao_vivo">Canal Ao Vivo</h2>
+                <span id="player-live-badge" class="badge-live" data-i18n="player.ao_vivo">AO VIVO</span>
+            </div>
+            <div class="player-top-clock" id="player-clock">23:00</div>
+        </div>
+
+        <!-- Player OSD Bottom Bar -->
+        <div id="player-bottom-bar" class="player-bottom-bar">
+            <div class="player-osd-info">
+                <!-- LIVE TV EPG INFO -->
+                <div id="osd-live-info" class="osd-epg-now-line">
+                    <span class="epg-tag" data-i18n="player.agora">AGORA:</span>
+                    <span id="player-epg-now" class="epg-title" data-i18n="player.transmissao">Transmissão Ao Vivo</span>
+                </div>
+                
+                <!-- VOD TIMELINE INFO -->
+                <div id="osd-vod-info" class="osd-vod-container hidden">
+                    <span id="vod-play-icon" class="vod-state-icon">▶</span>
+                    <span id="vod-current-time" class="vod-time-text">00:00:00</span>
+                    
+                    <div class="player-epg-progress vod-progress">
+                        <div id="player-progress-fill" class="progress-fill" style="width: 0%;"></div>
+                    </div>
+
+                    <span id="vod-total-time" class="vod-time-text">00:00:00</span>
+                </div>
+            </div>
+            <div id="player-hints-live" class="player-hints">
+                <span><kbd class="key-pill">▲ / ▼</kbd> <i data-i18n="player.trocar_canal">Trocar Canal</i></span>
+                <span><kbd class="key-pill" data-i18n="tecla.voltar">VOLTAR</kbd> <i data-i18n="player.fechar">Fechar Player</i></span>
+                <span><kbd class="key-pill red">●</kbd> <i data-i18n="player.favorito">Favorito</i></span>
+            </div>
+            <div id="player-hints-vod" class="player-hints hidden">
+                <span><kbd class="key-pill" data-i18n="tecla.ok">OK</kbd> <i data-i18n="player.play_pause">Play/Pause</i></span>
+                <span><kbd class="key-pill">◄ / ►</kbd> <i data-i18n="player.voltar_avancar">Voltar / Avançar</i></span>
+                <span><kbd class="key-pill" data-i18n="tecla.voltar">VOLTAR</kbd> <i data-i18n="player.fechar">Fechar Player</i></span>
+            </div>
+        </div>
+        
+        <!-- VOD Seeking Overlay (Floating Icon) -->
+        <div id="vod-seek-overlay" class="vod-seek-overlay hidden">
+            <span id="vod-seek-icon">⏩</span>
+            <span id="vod-seek-time">+10s</span>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="main-container" class="main-container">
+
+        <!-- GLOBAL HEADER (Identical to Flutter _buildHeader) -->
+        <header class="app-header">
+            <div class="header-brand">
+                <!-- O logo já traz o nome; não repetir em texto ao lado. -->
+                <img src="images/logo.png" class="header-logo-img" alt="HeisenIPTV">
+            </div>
+            <div class="header-right">
+                <span id="header-clock" class="header-time">23:00   ago 17, 2026</span>
+                <div class="user-avatar">
+                    <span class="user-icon">👤</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- VIEW: ACTIVATION SCREEN (MAC Authentication) -->
+        <div id="view-activation" class="view-screen hidden" style="justify-content: center; align-items: center; background: #000;">
+            <div class="activation-card">
+                <!-- O logo fica fora do .brand-title de propósito: o app.js
+                     reescreve o texto desse h1 quando a licença expira. -->
+                <img src="images/logo.png" class="activation-logo" alt="HeisenIPTV">
+                <h1 class="brand-title" style="margin-bottom: 30px; font-size: 42px;" data-i18n="ativacao.titulo">Ative seu dispositivo</h1>
+                <p style="color: #999; font-size: 18px; margin-bottom: 40px; text-align: center; max-width: 600px;" data-i18n="ativacao.instrucao">
+                    Seu dispositivo não possui uma lista ativa. Para continuar, acesse nosso portal no celular ou computador e vincule sua conta usando os dados abaixo:
+                </p>
+                
+                <div class="activation-details" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 500px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <span style="color: #aaa; font-size: 20px;" data-i18n="ativacao.site">Site:</span>
+                        <span style="color: #fff; font-size: 22px; font-weight: bold;">HeisenIPTV.com/upload</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <span style="color: #aaa; font-size: 20px;" data-i18n="ativacao.mac">Device MAC:</span>
+                        <span id="act-mac-address" style="color: #e50914; font-size: 24px; font-weight: bold; letter-spacing: 2px;">CARREGANDO...</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #aaa; font-size: 20px;" data-i18n="ativacao.key">Device Key:</span>
+                        <span id="act-device-key" style="color: #e50914; font-size: 24px; font-weight: bold; letter-spacing: 4px;">------</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 40px; display: flex; align-items: center; gap: 15px;">
+                    <div class="spinner" style="width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <span style="color: #aaa; font-size: 16px;" data-i18n="ativacao.aguardando">Aguardando ativação... a tela atualizará automaticamente.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: DASHBOARD (Identical to Flutter HomeScreen) -->
+        <div id="view-dashboard" class="view-screen active">
+            <main class="dashboard-grid">
+                <!-- Row 1: TV AO VIVO, FILMES, SÉRIES -->
+                <div class="dash-row-top">
+                    <!-- TV AO VIVO (Flex 2) -->
+                    <div class="dash-tile tile-live focusable" data-route="content-live" tabindex="0">
+                        <div class="tile-bg-gradient gradient-live"></div>
+                        <div class="tile-content">
+                            <span class="tile-icon">📺</span>
+                            <span class="tile-title" data-i18n="dash.tv">TV AO VIVO</span>
+                        </div>
+                    </div>
+
+                    <!-- FILMES (Flex 1) -->
+                    <div class="dash-tile tile-movies focusable" data-route="content-movies" tabindex="0">
+                        <div class="tile-bg-gradient gradient-movies"></div>
+                        <div class="tile-content">
+                            <span class="tile-icon">🎬</span>
+                            <span class="tile-title" data-i18n="dash.filmes">FILMES</span>
+                        </div>
+                    </div>
+
+                    <!-- SÉRIES (Flex 1) -->
+                    <div class="dash-tile tile-series focusable" data-route="content-series" tabindex="0">
+                        <div class="tile-bg-gradient gradient-series"></div>
+                        <div class="tile-content">
+                            <span class="tile-icon">🍿</span>
+                            <span class="tile-title" data-i18n="dash.series">SÉRIES</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: CONFIGURAÇÕES -->
+                <div class="dash-row-bottom">
+                    <!-- CONFIGURAÇÕES -->
+                    <div class="dash-tile tile-settings focusable" data-route="settings" tabindex="0">
+                        <div class="tile-bg-gradient gradient-settings"></div>
+                        <div class="tile-content">
+                            <span class="tile-icon">⚙️</span>
+                            <span class="tile-title" data-i18n="dash.config">CONFIGURAÇÕES</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- FOOTER (Identical to Flutter _buildFooter) -->
+            <footer class="app-footer">
+                <span class="footer-text" id="footer-expiration" data-i18n="dash.exp_ilimitado">Expiração: Ilimitado</span>
+                <span class="footer-text" id="footer-user" data-i18n="dash.usuario">Usuário logado</span>
+            </footer>
+        </div>
+
+        <!-- VIEW: LIVE TV CATEGORIES (Identical to Flutter StreamCategoryListWidget) -->
+        <div id="view-live-categories" class="view-screen hidden">
+            <div class="sub-header">
+                <button class="btn-back focusable" data-action="back-to-dashboard" tabindex="0">
+                    <span data-i18n="nav.inicio">← Início</span>
+                </button>
+                <h1 class="sub-title" data-i18n="live.titulo">TV Ao Vivo</h1>
+                <div class="search-box">
+                    <input type="text" id="live-search-input" class="search-input focusable" placeholder="Pesquisar canais..." data-i18n-ph="live.pesquisar" tabindex="0">
+                </div>
+            </div>
+
+            <div class="category-grid-container scrollable" id="live-categories-grid">
+                <!-- Dynamic Category Cards -->
+            </div>
+        </div>
+
+        <!-- VIEW: LIVE CHANNELS LIST (Inside Category) -->
+        <div id="view-category-channels" class="view-screen hidden">
+            <div class="sub-header">
+                <button class="btn-back focusable" data-action="back-to-categories" tabindex="0">
+                    <span data-i18n="nav.categorias">← Categorias</span>
+                </button>
+                <h1 id="selected-category-title" class="sub-title" data-i18n="live.canais">Canais</h1>
+                <span id="selected-category-count" class="badge-count">0 itens</span>
+            </div>
+
+            <div class="channels-grid-container scrollable" id="category-channels-grid">
+                <!-- Dynamic Channel Cards -->
+            </div>
+        </div>
+
+        <!-- VIEW: NETFLIX MOVIES & SERIES (Identical to Flutter NetflixMoviesLayout) -->
+        <div id="view-netflix" class="view-screen hidden">
+            <div class="netflix-top-bar">
+                <div class="topbar-side">
+                    <button class="btn-back focusable" data-action="back-to-dashboard" tabindex="0">
+                        <span data-i18n="nav.inicio">← Início</span>
+                    </button>
+                </div>
+
+                <!-- Escolha de layout. Fica no centro de propósito: antes era um
+                     botão discreto no canto e quase ninguém achava. -->
+                <div class="layout-switch">
+                    <button class="layout-opt focusable is-on" data-layout="rails" tabindex="0" data-i18n="vod.destaques_ic">▦ Destaques</button>
+                    <button class="layout-opt focusable" data-layout="cats" tabindex="0" data-i18n="vod.por_categoria_ic">🗂 Por Categoria</button>
+                </div>
+
+                <div class="topbar-side topbar-end">
+                    <div class="search-box">
+                        <input type="text" id="vod-search-input" class="search-input focusable" placeholder="Pesquisar títulos..." data-i18n-ph="vod.pesquisar" tabindex="0">
+                    </div>
+                </div>
+            </div>
+
+            <div class="netflix-main-content">
+                <!-- Hero Section -->
+                <div class="netflix-hero-section" id="netflix-hero">
+                    <div class="hero-backdrop" id="hero-backdrop"></div>
+                    <div class="hero-gradient-overlay"></div>
+                    
+                    <div class="hero-details">
+                        <div class="hero-original-badge" data-i18n="vod.original">HeisenIPTV ORIGINAL</div>
+                        <h1 class="hero-title" id="hero-title">Título em Destaque</h1>
+                        
+                        <div class="hero-meta-row">
+                            <span class="meta-match" data-i18n="vod.relevante">98% Relevante</span>
+                            <span class="meta-year" id="hero-year">2024</span>
+                            <span class="meta-duration" id="hero-duration">1h 50m</span>
+                            <span class="meta-badge-hd">HD</span>
+                        </div>
+
+                        <p class="hero-plot" id="hero-plot">
+                            Acompanhe esta incrível história cheia de emoção e aventura no HeisenIPTV.
+                        </p>
+
+                        <div class="hero-cast-genre">
+                            <span id="hero-cast">Elenco: Destaques do Cinema</span>
+                            <span id="hero-genre">Gênero: Ação, Aventura</span>
+                        </div>
+
+                        <button id="btn-hero-play" class="btn-hero-watch focusable" tabindex="0" data-i18n="vod.assistir">
+                            ▶ Assistir Agora
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Horizontal Rails Section -->
+                <div class="netflix-rails-container scrollable" id="netflix-rails">
+                    <!-- Dynamic Rows with Categories and Movie Poster Cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: VOD CATEGORIES (Grid Filter) -->
+        <div id="view-vod-categories" class="view-screen hidden">
+            <div class="sub-header">
+                <div class="topbar-side">
+                    <button class="btn-back focusable" data-action="back-to-netflix" tabindex="0">
+                        <span data-i18n="nav.filmes_series">← Filmes/Séries</span>
+                    </button>
+                    <h1 class="sub-title" data-i18n="vod.pastas_filmes">Pastas de VOD</h1>
+                </div>
+
+                <!-- Mesmo seletor, para voltar aos Destaques sem caçar o botão. -->
+                <div class="layout-switch">
+                    <button class="layout-opt focusable" data-layout="rails" tabindex="0" data-i18n="vod.destaques_ic">▦ Destaques</button>
+                    <button class="layout-opt focusable is-on" data-layout="cats" tabindex="0" data-i18n="vod.por_categoria_ic">🗂 Por Categoria</button>
+                </div>
+
+                <div class="topbar-side topbar-end"></div>
+            </div>
+            <div class="categories-list-container scrollable" id="vod-categories-list">
+                <!-- Dynamic Category Items -->
+            </div>
+        </div>
+
+        <!-- VIEW: VOD GRID (4-Column Layout) -->
+        <div id="view-vod-grid" class="view-screen hidden">
+            <div class="sub-header">
+                <button class="btn-back focusable" data-action="back-to-vod-categories" tabindex="0">
+                    <span data-i18n="nav.pastas">← Pastas</span>
+                </button>
+                <h1 id="selected-vod-category-title" class="sub-title">Filmes</h1>
+                <span id="selected-vod-category-count" class="badge-count">0 itens</span>
+            </div>
+
+            <div class="vod-grid-container scrollable" id="vod-items-grid">
+                <!-- Dynamic VOD Cards -->
+            </div>
+        </div>
+
+        <!-- VIEW: SERIES DETAILS (Seasons & Episodes Breakdown) -->
+        <div id="view-series-details" class="view-screen hidden">
+            <div class="sub-header">
+                <button class="btn-back focusable" data-action="back-to-netflix" tabindex="0">
+                    <span data-i18n="nav.series">← Séries</span>
+                </button>
+                <h1 id="series-details-title" class="sub-title">Nome da Série</h1>
+            </div>
+
+            <div class="series-details-content scrollable">
+                <div class="series-hero-card">
+                    <img id="series-cover-img" src="" class="series-cover" alt="" onerror="this.style.display='none'">
+                    <div class="series-hero-info">
+                        <h2 id="series-hero-name">Título da Série</h2>
+                        <p id="series-hero-plot" class="series-plot">Sinopse da série...</p>
+                        <div class="series-meta">
+                            <span id="series-hero-cast">Elenco: ...</span>
+                            <span id="series-hero-genre">Gênero: ...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Season Tabs -->
+                <div class="season-tabs-row" id="season-tabs-row">
+                    <!-- Dynamic Season Buttons -->
+                </div>
+
+                <!-- Episodes Grid -->
+                <div class="episodes-grid" id="episodes-grid">
+                    <!-- Dynamic Episodes Cards -->
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: PLAYLISTS (Identical to Flutter AddPlaylistScreen) -->
+        <div id="view-playlists" class="view-screen hidden">
+            <div class="sub-header">
+                <button class="btn-back focusable" data-action="back-to-dashboard" tabindex="0">
+                    <span data-i18n="nav.inicio">← Início</span>
+                </button>
+                <h1 class="sub-title" data-i18n="listas.titulo">Gerenciar Listas IPTV</h1>
+            </div>
+
+            <div class="playlists-content scrollable">
+                <!-- Current Playlist Status Card -->
+                <div class="playlist-form-card" id="current-playlist-card">
+                    <div class="form-section-title">
+                        <span>ℹ️</span> <i data-i18n="listas.status_conexao">Status da Conexão</i>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="listas.ativa">Playlist Ativa:</span>
+                        <span id="current-playlist-label" class="setting-pill active">Lista Demo Brasil</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="listas.mac_tv">Endereço MAC da TV:</span>
+                        <span id="device-mac-label" class="setting-pill">54:2A:1B:7C:90:E4</span>
+                    </div>
+                    <button id="btn-disconnect-playlist" class="btn-secondary focusable" tabindex="0" style="color: #FF5252;" data-i18n="listas.desconectar">
+                        ❌ Desconectar / Limpar Lista
+                    </button>
+                </div>
+
+                <!-- M3U Form Card -->
+                <div class="playlist-form-card">
+                    <div class="form-section-title">
+                        <span>📡</span> <i data-i18n="listas.add_m3u">Adicionar Lista M3U</i>
+                    </div>
+                    <div class="input-field">
+                        <label data-i18n="listas.nome">Nome da Lista:</label>
+                        <input type="text" id="m3u-name-input" class="tv-text-input focusable" placeholder="Ex: Minha Lista" data-i18n-ph="listas.ph_nome" tabindex="0">
+                    </div>
+                    <div class="input-field">
+                        <label data-i18n="listas.url_m3u">URL M3U / M3U8:</label>
+                        <input type="text" id="m3u-url-input" class="tv-text-input focusable" placeholder="http://servidor.com/get.php?username=...&type=m3u_plus" tabindex="0">
+                    </div>
+                    <div class="form-btn-row">
+                        <button id="btn-submit-m3u" class="btn-accent focusable" tabindex="0" data-i18n="listas.btn_m3u">📥 Carregar Lista M3U</button>
+                        <button id="btn-load-demo-playlist" class="btn-secondary focusable" tabindex="0" data-i18n="listas.btn_demo">✨ Carregar Lista Demo (Brasil)</button>
+                    </div>
+                </div>
+
+                <!-- Xtream Codes Card -->
+                <div class="playlist-form-card">
+                    <div class="form-section-title">
+                        <span>🔑</span> <i data-i18n="listas.xtream">Conectar via Xtream Codes</i>
+                    </div>
+                    <div class="input-field">
+                        <label data-i18n="listas.url_servidor">URL do Servidor (com porta):</label>
+                        <input type="text" id="xc-domain-input" class="tv-text-input focusable" placeholder="http://exemplo.com:8080" tabindex="0">
+                    </div>
+                    <div class="input-row-dual">
+                        <div class="input-field">
+                            <label data-i18n="listas.usuario">Usuário:</label>
+                            <input type="text" id="xc-user-input" class="tv-text-input focusable" placeholder="usuario" data-i18n-ph="listas.ph_usuario" tabindex="0">
+                        </div>
+                        <div class="input-field">
+                            <label data-i18n="listas.senha">Senha:</label>
+                            <input type="password" id="xc-pass-input" class="tv-text-input focusable" placeholder="••••••••" tabindex="0">
+                        </div>
+                    </div>
+                    <button id="btn-submit-xc" class="btn-accent focusable" tabindex="0" data-i18n="listas.btn_xtream">🔐 Conectar Servidor Xtream</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: SETTINGS (Identical to Flutter SettingsScreen) -->
+        <div id="view-settings" class="view-screen hidden">
+            <div class="sub-header">
+                <button class="btn-back focusable" data-action="back-to-dashboard" tabindex="0">
+                    <span data-i18n="nav.inicio">← Início</span>
+                </button>
+                <h1 class="sub-title" data-i18n="config.titulo">Configurações</h1>
+            </div>
+
+            <div class="settings-content scrollable">
+                <div class="settings-group-card">
+                    <h3 data-i18n="config.idioma">Idioma</h3>
+                    <div class="lang-switch">
+                        <button class="lang-opt focusable is-on" data-lang="pt" tabindex="0">Português</button>
+                        <button class="lang-opt focusable" data-lang="es" tabindex="0">Español</button>
+                        <button class="lang-opt focusable" data-lang="en" tabindex="0">English</button>
+                    </div>
+                </div>
+
+                <div class="settings-group-card">
+                    <h3 data-i18n="config.geral">Geral & Player</h3>
+                    <div class="settings-row">
+                        <span data-i18n="config.formato_hora">Formato de Horário</span>
+                        <span class="setting-pill" data-i18n="config.formato_hora_v">24 Horas (24h)</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.engine">Engine de Vídeo</span>
+                        <span class="setting-pill active" data-i18n="config.engine_v">Samsung AVPlay Hardware (Nativo)</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.buffer">Buffer de Inicialização</span>
+                        <span class="setting-pill" data-i18n="config.buffer_v">Baixa Latência (Ultra-Fast)</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.proporcao">Proporção de Tela</span>
+                        <span class="setting-pill" data-i18n="config.proporcao_v">16:9 Automático</span>
+                    </div>
+                </div>
+
+                <!-- Informações da lista do provedor. Só informativo: o app não
+                     bloqueia nada com base nisso, quem controla é o provedor. -->
+                <div class="settings-group-card">
+                    <h3 data-i18n="config.info_lista">Informações da Lista</h3>
+                    <div class="settings-row">
+                        <span data-i18n="config.situacao">Situação no provedor:</span>
+                        <span class="setting-pill" id="list-info-status">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.validade">Validade da lista:</span>
+                        <span class="setting-pill" id="list-info-exp">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.servidor">Servidor:</span>
+                        <span class="text-dim" id="list-info-server">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="listas.usuario">Usuário:</span>
+                        <span class="text-dim" id="list-info-user">—</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.conexoes">Conexões em uso:</span>
+                        <span class="text-dim" id="list-info-conns">—</span>
+                    </div>
+                    <p class="settings-note" id="list-info-note" style="display: none;"></p>
+                </div>
+
+                <div class="settings-group-card">
+                    <h3 data-i18n="config.info_disp">Informações do Dispositivo</h3>
+                    <div class="settings-row">
+                        <span data-i18n="config.dispositivo">Dispositivo:</span>
+                        <span class="text-dim">Samsung Smart TV (UN50NU7100)</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.so">Sistema Operacional:</span>
+                        <span class="text-dim">Tizen 4.0</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.mac">MAC Address:</span>
+                        <span class="setting-pill" id="settings-mac-address">CARREGANDO...</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.key">Device Key (Chave):</span>
+                        <span class="setting-pill" id="settings-device-key">CARREGANDO...</span>
+                    </div>
+                    <div class="settings-row">
+                        <span data-i18n="config.versao">Versão do HeisenIPTV:</span>
+                        <span class="text-dim">v1.0.0 Pro</span>
+                    </div>
+                </div>
+
+                <div class="settings-group-card">
+                    <h3 data-i18n="config.gerenciamento">Gerenciamento</h3>
+                    <div class="settings-row" style="margin-bottom: 15px;">
+                        <span data-i18n="config.desconectar">Desconectar Lista Atual</span>
+                        <span class="text-dim" style="font-size: 16px;" data-i18n="config.desconectar_desc">Apaga os dados atuais e volta para a tela de ativação.</span>
+                    </div>
+                    <button id="btn-settings-disconnect" class="btn-accent focusable" tabindex="0" style="background: linear-gradient(135deg, #e50914 0%, #b80710 100%); width: 100%; border: none; outline: none; border-radius: 8px; padding: 15px; color: white; font-weight: 600; font-size: 18px;" data-i18n="config.btn_limpar">🛑 Limpar Dados e Desconectar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="toast hidden">
+        <span id="toast-text">Mensagem</span>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="i18n.js"></script>
+    <script src="player.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

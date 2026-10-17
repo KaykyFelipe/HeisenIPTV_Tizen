@@ -1345,7 +1345,9 @@ function playChannelFullscreen(channel) {
     }
 
     switchView('player-view');
-    player.play(channel.url, true);
+    // O terceiro parâmetro liga o vigia de travamento, só para canais ao vivo.
+    // O nome do canal diz se vale pedir modo 4K ao motor (marcadores UHD/4K).
+    player.play(channel.url, true, !isVod, false, channel.name);
     showPlayerOSD();
 }
 
