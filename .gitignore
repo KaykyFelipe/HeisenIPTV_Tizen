@@ -1,2 +1,16 @@
+# Workspace do Eclipse / Tizen Studio
 /FluxIPTV
 /.metadata/
+
+# Saída de build e assinatura (gerados pelo tizen build-web / package)
+.buildResult/
+.sign/
+
+# Cache de deploy do Firebase
+.firebase/
+
+# Dependências
+node_modules/
+
+# Pacotes de backup
+*-anterior.wgt
