@@ -323,7 +323,23 @@ firebase deploy --only hosting
 
 ### Regras do banco
 
-As regras devem impedir que o cliente escreva nos campos de cobrança. Como as regras do Realtime Database são **cascateantes** — uma permissão concedida acima não pode ser revogada abaixo —, a restrição precisa estar no nível de `devices/$mac`, não nos filhos.
+Ficam em [`HeisenIPTVApp/database.rules.json`](HeisenIPTVApp/database.rules.json) e sobem com:
+
+```bash
+firebase deploy --only database
+```
+
+Duas decisões importantes estão registradas nelas:
+
+**Permissão cascateia e não pode ser revogada.** No Realtime Database, um `.write` concedido num nó vale para tudo abaixo, e nenhum filho consegue negar o que o pai liberou. Por isso `devices/$mac` **não** concede escrita: cada campo gravável concede a sua, individualmente. O que não está listado — `expirationDate` e `paymentDate` — só o Admin SDK escreve. `isPaid` e `trialStartDate` podem ser criados uma vez e nunca alterados, o que impede se autoliberar como pago ou reiniciar o teste grátis.
+
+**O identificador é o MAC, e MAC não é senha.** O aplicativo e o portal leem o próprio registro sem autenticar, usando o endereço MAC da TV como chave. Isso mantém a experiência simples — o cliente digita o MAC no site e a TV recebe a lista sozinha — mas significa que quem souber o MAC de uma TV consegue ler as credenciais daquele cliente. As regras impedem **listar** a base inteira, o que elimina a varredura em massa, porém não resolvem o problema de fundo.
+
+A solução correta é autenticação com token (Firebase Anonymous Auth ou um proxy em Cloud Function). Até que isso exista, a limitação está declarada na [Política de Privacidade](https://heiseniptv.com/privacidade) em vez de ficar escondida.
+
+### Documentos legais
+
+[Política de Privacidade](https://heiseniptv.com/privacidade) e [Termos de Uso](https://heiseniptv.com/termos) são páginas do portal (`web-portal/privacidade.html` e `web-portal/termos.html`), referenciadas nas Configurações do aplicativo.
 
 ---
 
