@@ -48,114 +48,100 @@ var state = {
 
 var player = null;
 
-// Built-in Demo Channels
+/* Lista de demonstração.
+   Só entra aqui conteúdo de licença aberta: os quatro curtas são da Blender
+   Foundation (Creative Commons) e a NASA TV é domínio público do governo dos
+   EUA. Nada de nome, capa ou logotipo de obra de terceiros -- é a lista que o
+   avaliador da loja abre primeiro, e ela precisa ser defensável. */
 var DEMO_CHANNELS = [
+    // ----- Ao vivo -----
     {
-        name: "TV Brasil HD (Ao Vivo)",
-        groupTitle: "Abertos Brasil",
-        tvgLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/TV_Globo_logo_2021.svg/300px-TV_Globo_logo_2021.svg.png",
-        url: "https://ebc-live.akamaized.net/live/tvbrasil/index.m3u8",
-        epgNow: "Repórter Brasil - Notícias em Tempo Real",
-        streamType: "live"
-    },
-    {
-        name: "Record News HD (Ao Vivo)",
-        groupTitle: "Abertos Brasil",
-        tvgLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Record_2023.svg/300px-Record_2023.svg.png",
-        url: "https://recordnews-live.cdn.jmvstream.com/live/recordnews/playlist.m3u8",
-        epgNow: "Jornal Record News - Ao Vivo",
-        streamType: "live"
-    },
-    {
-        name: "Jovem Pan News HD",
-        groupTitle: "Notícias & 24h",
-        tvgLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Jovem_Pan_News_logo.svg/300px-Jovem_Pan_News_logo.svg.png",
-        url: "https://stream.jp.com.br/hls/jpnews/index.m3u8",
-        epgNow: "Os Pingos nos Is - Análise e Opinião",
-        streamType: "live"
-    },
-    {
-        name: "NASA TV HD (Espaço 24h)",
-        groupTitle: "Notícias & 24h",
-        tvgLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/NASA_logo.svg/300px-NASA_logo.svg.png",
+        name: "NASA TV",
+        groupTitle: "Ao Vivo",
+        tvgLogo: "",
         url: "https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8",
-        epgNow: "Transmissão ao vivo da Estação Espacial Internacional (ISS)",
+        epgNow: "Transmissão ao vivo da NASA - domínio público",
         streamType: "live"
     },
     {
-        name: "Red Bull TV HD (Esportes Radicais)",
-        groupTitle: "Esportes",
-        tvgLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/300px-ESPN_wordmark.svg.png",
-        url: "https://rbmn-live.akamaized.net/hls/live/590964/Bo1/master.m3u8",
-        epgNow: "Red Bull Cliff Diving & Motorsport Highlights",
-        streamType: "live"
-    },
-    {
-        name: "Big Buck Bunny HD (Stream Teste)",
-        groupTitle: "Esportes",
-        tvgLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/SporTV_logo_2021.svg/300px-SporTV_logo_2021.svg.png",
+        name: "Canal de Teste HLS",
+        groupTitle: "Ao Vivo",
+        tvgLogo: "",
         url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-        epgNow: "Transmissão de Teste HLS Multibitrate",
+        epgNow: "Transmissão de teste multibitrate",
         streamType: "live"
     },
-    // Movies / VOD
+
+    // ----- Filmes (Blender Foundation, Creative Commons) -----
     {
-        name: "Oppenheimer (2023) 4K",
-        groupTitle: "Filmes Destaque",
-        tvgLogo: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=60",
+        name: "Big Buck Bunny",
+        groupTitle: "Filmes Abertos",
+        tvgLogo: "",
         url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-        plot: "A história do físico J. Robert Oppenheimer liderando o Projeto Manhattan e a criação da primeira bomba atômica da história.",
-        year: "2023",
-        duration: "3h 00m",
-        cast: "Cillian Murphy, Emily Blunt, Matt Damon",
-        genre: "Biografia, Drama",
+        plot: "Um coelho gigante e de bom coração se vê às voltas com três roedores arruaceiros. Curta de animação da Blender Foundation, distribuído sob licença Creative Commons.",
+        year: "2008",
+        duration: "10m",
+        cast: "Blender Foundation",
+        genre: "Animação",
         streamType: "movie"
     },
     {
-        name: "Top Gun: Maverick",
-        groupTitle: "Ação & Aventura",
-        tvgLogo: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=60",
+        name: "Sintel",
+        groupTitle: "Filmes Abertos",
+        tvgLogo: "",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+        plot: "Uma jovem solitária atravessa o mundo atrás do filhote de dragão que criou. Curta de animação da Blender Foundation, sob licença Creative Commons.",
+        year: "2010",
+        duration: "15m",
+        cast: "Blender Foundation",
+        genre: "Animação, Fantasia",
+        streamType: "movie"
+    },
+    {
+        name: "Tears of Steel",
+        groupTitle: "Filmes Abertos",
+        tvgLogo: "",
         url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-        plot: "Depois de mais de 30 anos servindo como um dos melhores aviadores da Marinha, Pete Maverick Mitchell continua superando limites.",
-        year: "2022",
-        duration: "2h 10m",
-        cast: "Tom Cruise, Miles Teller",
-        genre: "Ação, Aventura",
-        streamType: "movie"
-    },
-    {
-        name: "Duna: Parte 2",
-        groupTitle: "Ficção Científica",
-        tvgLogo: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=60",
-        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-        plot: "Paul Atreides se une a Chani e aos Fremen enquanto busca vingança contra os conspiradores que destruíram sua família.",
-        year: "2024",
-        duration: "2h 46m",
-        cast: "Timothée Chalamet, Zendaya",
+        plot: "Num futuro tomado por máquinas, um grupo de cientistas tenta reverter a catástrofe. Curta da Blender Foundation com efeitos em live action, sob licença Creative Commons.",
+        year: "2012",
+        duration: "12m",
+        cast: "Blender Foundation",
         genre: "Ficção Científica",
         streamType: "movie"
     },
-    // Series
     {
-        name: "House of the Dragon",
-        groupTitle: "Séries Populares",
-        tvgLogo: "https://images.unsplash.com/photo-1514539079130-25950c84af65?w=800&auto=format&fit=crop&q=60",
+        name: "Elephants Dream",
+        groupTitle: "Filmes Abertos",
+        tvgLogo: "",
+        url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        plot: "Dois personagens percorrem uma máquina estranha e interminável. Foi o primeiro filme aberto da Blender Foundation, sob licença Creative Commons.",
+        year: "2006",
+        duration: "11m",
+        cast: "Blender Foundation",
+        genre: "Animação",
+        streamType: "movie"
+    },
+
+    // ----- Série de demonstração -----
+    {
+        name: "Coleção Blender",
+        groupTitle: "Séries Abertas",
+        tvgLogo: "",
         url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-        plot: "A história da guerra civil da Casa Targaryen, que ocorreu cerca de 200 anos antes dos eventos de Game of Thrones.",
-        year: "2024",
+        plot: "Os curtas abertos da Blender Foundation reunidos em temporadas, para demonstrar a navegação de séries e episódios. Todos sob licença Creative Commons.",
+        year: "2006-2012",
         duration: "2 Temporadas",
-        cast: "Emma D'Arcy, Matt Smith",
-        genre: "Fantasia, Drama",
+        cast: "Blender Foundation",
+        genre: "Animação",
         streamType: "series",
         episodes: {
             "Temporada 1": [
-                { title: "Episódio 1: Os Herdeiros do Dragão", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
-                { title: "Episódio 2: O Príncipe Rebelde", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" },
-                { title: "Episódio 3: O Segundo de Seu Nome", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" }
+                { title: "Episódio 1: Elephants Dream", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
+                { title: "Episódio 2: Big Buck Bunny", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" }
             ],
             "Temporada 2": [
-                { title: "Episódio 1: Filho por Filho", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
-                { title: "Episódio 2: Rhaenyra a Cruel", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" }
+                { title: "Episódio 1: Sintel", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
+                { title: "Episódio 2: Tears of Steel", url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" }
             ]
         }
     }
