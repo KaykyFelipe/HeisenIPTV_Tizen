@@ -49,7 +49,7 @@ class HeisenPlayer {
         this.isFullscreen = isFullscreen;
         this.isStopped = false;
         this.retryCount = 0;
-        this.showLoader(true, 'Conectando ao canal...');
+        this.showLoader(true, t('player.conectando'));
         this.hideError();
 
         console.log('[HeisenPlayer] Playing URL:', url, 'Mode:', isFullscreen ? 'FullScreen' : 'MiniPreview');
@@ -141,10 +141,10 @@ class HeisenPlayer {
             // Event Listeners
             avplay.setListener({
                 onbufferingstart: function() {
-                    self.showLoader(true, 'Carregando buffer...');
+                    self.showLoader(true, t('player.buffer'));
                 },
                 onbufferingprogress: function(percent) {
-                    self.showLoader(true, 'Buffer ' + percent + '%...');
+                    self.showLoader(true, t('player.buffer_pct', { n: percent }));
                 },
                 onbufferingcomplete: function() {
                     self.showLoader(false);
@@ -163,7 +163,7 @@ class HeisenPlayer {
                 onerror: function(eventType) {
                     console.error('[AVPlay] Playback Error Event:', eventType);
                     self.showLoader(false);
-                    self.showError('Sinal temporariamente indisponível (' + eventType + ').');
+                    self.showError(t('player.sinal_off_cod', { cod: eventType }));
                 },
                 onevent: function(eventType, eventData) {},
                 onstreamcompleted: function() {
@@ -263,7 +263,7 @@ class HeisenPlayer {
                 if (data.fatal) {
                     console.error('[Hls.js] Fatal Error:', data.type);
                     self.showLoader(false);
-                    self.showError('Sinal temporariamente indisponível.');
+                    self.showError(t('player.sinal_off'));
                 }
             });
         } else {
@@ -413,7 +413,7 @@ class HeisenPlayer {
         return 0;
     }
 
-    showLoader(show, text = 'Carregando stream...') {
+    showLoader(show, text) {
         if (!this.loader) return;
         if (show) {
             this.loader.classList.remove('hidden');

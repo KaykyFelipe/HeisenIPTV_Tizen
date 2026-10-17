@@ -100,6 +100,7 @@ body.app-body {
    ========================================================================== */
 .app-header {
     height: 90px;
+    flex-shrink: 0;   /* sem isto o cabeçalho era espremido pelas telas */
     padding: 0 48px;
     display: flex;
     align-items: center;
@@ -252,7 +253,13 @@ body.app-body {
    ========================================================================== */
 .view-screen {
     width: 100%;
-    height: 100%;
+    /* Ocupa o que sobra depois do cabeçalho. Com height:100% a view pedia
+       os 1080px inteiros mesmo começando abaixo do header de 90px, e o
+       rodapé de toda tela ficava cortado para fora do vídeo.
+       (#player-view não é afetado: fica fora do container e define a
+       própria altura.) */
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
 }
@@ -471,10 +478,13 @@ body.app-body {
 
 /* Hero Section */
 .netflix-hero-section {
-    min-height: 480px;
+    /* Exatamente metade da área útil; a outra metade é dos trilhos.
+       Antes era min-height, então uma sinopse longa esticava o hero e
+       empurrava os filmes para fora da tela. */
+    flex: 0 0 50%;
+    min-height: 0;
     position: relative;
     overflow: hidden;
-    flex-shrink: 0;
     display: flex;
     align-items: flex-end;
     padding: 20px 48px 30px 48px;
@@ -505,8 +515,10 @@ body.app-body {
     position: relative;
     width: 900px;
     z-index: 5;
-    display: flex;
-    flex-direction: column;
+    /* Bloco, e não flex: como filho de um flex container o <p> da sinopse
+       sofreria blockification e o -webkit-line-clamp seria descartado.
+       O espaçamento já vinha de margin-bottom, então nada muda no visual. */
+    display: block;
 }
 
 .hero-details > * {
@@ -528,6 +540,11 @@ body.app-body {
     font-weight: 800;
     line-height: 1.1;
     white-space: normal;
+    /* Nomes de até 80 caracteres ocupariam 3 linhas e comeriam a sinopse. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .hero-meta-row {
@@ -559,7 +576,12 @@ body.app-body {
     font-size: 26px;
     color: var(--text-dim);
     line-height: 1.4;
-    /* Removed max-height to make it fully responsive */
+    /* No máximo 3 linhas, o resto vira reticências. É o que cabe no hero
+       mesmo quando o título ocupa duas linhas. */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .hero-cast-genre {
@@ -615,15 +637,27 @@ body.app-body {
 
 .rail-horizontal-list {
     display: flex;
-    gap: 16px;
+    gap: 20px;
     overflow-x: auto;
-    padding: 8px 0;
+    overflow-y: hidden;
+    /* Folga vertical para o card crescer no foco (scale 1.08) sem ser cortado
+       pela própria rolagem horizontal. */
+    padding: 22px 0 26px;
     flex-shrink: 0;
+    scroll-behavior: smooth;
 }
 
+/* Barra de rolagem não faz sentido em TV. */
+.rail-horizontal-list::-webkit-scrollbar { display: none; }
+
 .movie-poster-card {
-    min-width: 150px;
-    height: 225px;
+    /* Largura TRAVADA. Sem isto o card é dimensionado pelo conteúdo, e um
+       título de 80 caracteres estica a caixa para mais de 500px — era o que
+       deixava a fileira com cards de tamanhos diferentes.
+       190x285 = proporção 2:3, a mesma das capas que o provedor entrega. */
+    flex: 0 0 190px;
+    width: 190px;
+    height: 285px;
     border-radius: 10px;
     background: #202020;
     background-size: cover;
@@ -633,21 +667,36 @@ body.app-body {
     position: relative;
     box-shadow: 0 8px 20px rgba(0,0,0,0.5);
     transition: transform 0.2s ease, border-color 0.2s ease;
-    display: flex;
-    align-items: flex-end;
+    /* Bloco, não flex: como filho de flex o título sofria "blockification"
+       e o -webkit-line-clamp era descartado (virava display:flow-root). */
+    display: block;
     overflow: hidden;
-    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .movie-poster-title {
-    background: linear-gradient(transparent, rgba(0,0,0,0.9));
-    width: 100%;
-    padding: 12px 14px;
-    font-size: 14px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.92) 55%);
+    padding: 30px 12px 12px;
+    font-size: 15px;
     font-weight: 700;
-    white-space: nowrap;
+    line-height: 1.25;
+    /* Sem nowrap: era ele que empurrava a largura do card. */
+    white-space: normal;
+}
+
+/* O clamp vive no span, não no div: o div é posicionado em absoluto e o
+   navegador converteria o -webkit-box em flow-root, descartando o clamp. */
+.movie-poster-title span,
+.vod-grid-title span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
 }
 
 /* ==========================================================================
@@ -763,7 +812,11 @@ body.app-body {
 .playlists-content, .settings-content {
     flex: 1;
     padding: 20px 48px;
-    display: flex;
+    /* Grade que quebra em linhas. Era flex em linha: cada cartão novo
+       espremia todos os outros, e com 5 cartões virava coluna ilegível. */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+    align-content: start;
     gap: 30px;
     overflow-y: auto;
 }
@@ -1135,24 +1188,6 @@ body.in-player-mode {
    VOD GRID FILTER VIEWS
    ========================================================================== */
 
-.btn-filter {
-    background: var(--bg-surface);
-    color: var(--text-main);
-    border: 2px solid transparent;
-    padding: 0 20px;
-    height: 48px;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 600;
-    margin-left: 10px;
-}
-
-.btn-filter.focused {
-    background: var(--primary);
-    border-color: #FFF;
-    transform: scale(1.05);
-}
-
 .vod-grid-container {
     flex: 1;
     display: flex;
@@ -1194,7 +1229,8 @@ body.in-player-mode {
     font-weight: 600;
     text-align: center;
     text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-    white-space: nowrap;
+    line-height: 1.25;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -1328,4 +1364,98 @@ body.in-player-mode {
     height: auto;
     display: block;
     margin: 0 auto 30px;
+}
+
+/* ==========================================================================
+   SELETOR DE LAYOUT (Destaques x Por Categoria)
+   Fica centralizado na barra. Os lados têm flex:1 igual, então o seletor
+   cai no centro exato da tela, independente da largura dos vizinhos.
+   ========================================================================== */
+
+.topbar-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-width: 0;
+}
+
+.topbar-end {
+    justify-content: flex-end;
+}
+
+.layout-switch {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 6px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.layout-opt {
+    background: transparent;
+    border: 2px solid transparent;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 10px 26px;
+    border-radius: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* Opção ativa: verde da marca com texto escuro — o verde é claro demais
+   para texto branco em cima. */
+.layout-opt.is-on {
+    background: var(--brand-green);
+    color: #06140B;
+}
+
+.layout-opt.focused {
+    border-color: #FFFFFF !important;
+    transform: scale(1.06) !important;
+    box-shadow: 0 0 0 3px #FFFFFF, 0 0 22px rgba(43, 232, 107, 0.75) !important;
+}
+
+/* Os <i> das traduções são só marcadores de texto, não ênfase. */
+.player-hints i,
+.form-section-title i {
+    font-style: normal;
+}
+
+/* Seletor de idioma nas Configurações (mesmo visual do seletor de layout). */
+.lang-switch {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.lang-opt {
+    background: rgba(255, 255, 255, 0.06);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 12px 30px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.lang-opt.is-on {
+    background: var(--brand-green);
+    border-color: var(--brand-green);
+    color: #06140B;
+}
+
+.lang-opt.focused {
+    border-color: #FFFFFF !important;
+    transform: scale(1.06) !important;
+    box-shadow: 0 0 0 3px #FFFFFF, 0 0 22px rgba(43, 232, 107, 0.75) !important;
 }

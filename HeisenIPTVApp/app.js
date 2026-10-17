@@ -168,7 +168,11 @@ window.addEventListener('load', function() {
     // 1. Register Tizen Samsung Remote Keys
     registerSamsungKeys();
 
-    // 2. Start Live Clock
+    // 2. Traduções (antes de qualquer tela aparecer)
+    I18N.apply();
+    marcarIdiomaAtivo();
+
+    // 3. Start Live Clock
     startClock();
 
     // 3. Initialize Native Video Player
@@ -186,6 +190,10 @@ window.addEventListener('load', function() {
 
     // 7. Focus Guard Interval
     setInterval(function() {
+        // Se o app já tem uma seleção lógica VÁLIDA, não mexe: campos de texto
+        // ficam selecionados sem foco real no DOM e o guard roubaria a seleção.
+        // Se o elemento sumiu num re-render, cai fora do if e se recupera.
+        if (state.focusedElement && document.body.contains(state.focusedElement)) return;
         if (!document.activeElement || document.activeElement === document.body) {
             var currentScreen = document.getElementById(state.currentView);
             if (currentScreen) {
@@ -307,11 +315,11 @@ function pollFirebaseAuth() {
                     var expTitle = document.querySelector('#view-activation .brand-title');
                     var expMsg = document.querySelector('#view-activation p');
                     if (expTitle) {
-                        expTitle.innerText = 'Licença Expirada';
+                        expTitle.innerText = t('ativacao.expirada');
                         expTitle.style.color = '#e50914';
                     }
                     if (expMsg) {
-                        expMsg.innerHTML = 'Seu período de teste de 7 dias acabou.<br><br>Acesse nosso portal no celular ou computador para adquirir a licença (Anual ou Vitalícia) e liberar seu acesso:';
+                        expMsg.innerHTML = t('ativacao.expirada_msg');
                     }
                     
                     switchView('view-activation');
@@ -327,13 +335,13 @@ function pollFirebaseAuth() {
                     if (isPaid) {
                         if (data.expirationDate) {
                             var eDate = new Date(data.expirationDate);
-                            expFooter.innerText = 'Expiração: ' + eDate.toLocaleDateString('pt-BR');
+                            expFooter.innerText = t('dash.exp_data', { d: eDate.toLocaleDateString(dataLocale()) });
                         } else {
-                            expFooter.innerText = 'Expiração: Vitalícia';
+                            expFooter.innerText = t('dash.exp_vitalicia');
                         }
                     } else {
                         var remainingDays = 7 - diffDays;
-                        expFooter.innerText = 'Expiração: ' + remainingDays + ' dias (Teste)';
+                        expFooter.innerText = t('dash.exp_teste', { n: remainingDays });
                     }
                 }
 
@@ -353,7 +361,7 @@ function pollFirebaseAuth() {
                 if (!isPaid) {
                     var diasRestantes = 7 - diffDays;
                     if (diasRestantes < 0) diasRestantes = 0;
-                    showToast('Você está no período de testes. Restam ' + diasRestantes + ' dias.');
+                    showToast(t('toast.trial', { n: diasRestantes }));
                 }
 
                 focusDashboardItem(0);
@@ -369,11 +377,18 @@ function pollFirebaseAuth() {
         });
 }
 
+/** Locale de datas conforme o idioma escolhido nas Configurações. */
+function dataLocale() {
+    if (I18N.lang === 'es') return 'es-ES';
+    if (I18N.lang === 'en') return 'en-US';
+    return 'pt-BR';
+}
+
 function startClock() {
     var update = function() {
         var now = new Date();
-        var timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        var dateStr = now.toLocaleDateString('pt-BR', { month: 'short', day: '2-digit', year: 'numeric' });
+        var timeStr = now.toLocaleTimeString(dataLocale(), { hour: '2-digit', minute: '2-digit' });
+        var dateStr = now.toLocaleDateString(dataLocale(), { month: 'short', day: '2-digit', year: 'numeric' });
         
         var headerClock = document.getElementById('header-clock');
         var playerClock = document.getElementById('player-clock');
@@ -398,9 +413,9 @@ function loadStreams(streamsArray) {
     }
 
     var catMap = {};
-    catMap['⭐ Favoritos'] = state.favorites.length;
+    catMap[t('live.favoritos')] = state.favorites.length;
     for (var j = 0; j < live.length; j++) {
-        var g = live[j].groupTitle || 'Geral';
+        var g = live[j].groupTitle || t('live.geral');
         catMap[g] = (catMap[g] || 0) + 1;
     }
 
@@ -438,7 +453,7 @@ function readProviderInfo(domain, user, info) {
         user: user,
         status: info.status || '',
         expMs: expMs,
-        expLabel: expMs ? new Date(expMs).toLocaleDateString('pt-BR') : 'Não informada',
+        expLabel: expMs ? new Date(expMs).toLocaleDateString(dataLocale()) : t('lista.nao_informada'),
         maxConnections: info.max_connections || '',
         activeConnections: (info.active_cons === 0 || info.active_cons) ? String(info.active_cons) : '',
         isTrial: String(info.is_trial) === '1',
@@ -464,24 +479,19 @@ function readProviderInfo(domain, user, info) {
 function listStateMessage() {
     var info = state.listInfo;
     if (state.listState === 'expired') {
-        return 'Sua lista venceu' + (info && info.expMs ? ' em ' + info.expLabel : '') +
-               '. Renove com o seu provedor para voltar a assistir.';
+        return (info && info.expMs ? t('lista.msg_expired', { d: info.expLabel }) : t('lista.msg_expired_sd'));
     }
     if (state.listState === 'blocked') {
-        return 'Sua lista está bloqueada pelo provedor' +
-               (info && info.status ? ' (' + info.status + ')' : '') +
-               '. Fale com quem vendeu a lista para você.';
+        return t('lista.msg_blocked', { s: (info && info.status) ? info.status : '-' });
     }
     if (state.listState === 'auth') {
-        return 'O provedor não aceitou o usuário e a senha da sua lista. ' +
-               'Confira os dados no portal ou fale com o seu provedor.';
+        return t('lista.msg_auth');
     }
     if (state.listState === 'empty') {
-        return 'O provedor aceitou o seu acesso, mas não enviou nenhum canal. ' +
-               'Fale com o seu provedor.';
+        return t('lista.msg_empty');
     }
     if (state.listState === 'none') {
-        return 'Nenhuma lista foi carregada neste aparelho.';
+        return t('lista.msg_none');
     }
     return '';
 }
@@ -492,7 +502,7 @@ function listEmptyStateHtml() {
     return '<div class="list-empty-state">' +
                '<div class="list-empty-icon">' + (expired ? '⚠️' : '📭') + '</div>' +
                '<h3 class="list-empty-title">' +
-                   (expired ? 'Sua lista não está ativa' : 'Nada para mostrar aqui') +
+                   (expired ? t('lista.vazio_inativa') : t('lista.vazio_nada')) +
                '</h3>' +
                '<p class="list-empty-msg">' + listStateMessage() + '</p>' +
            '</div>';
@@ -528,14 +538,14 @@ function renderListInfoSettings() {
     };
 
     var rotulos = {
-        ok: 'Ativa', expired: 'Vencida', blocked: 'Bloqueada',
-        auth: 'Acesso recusado', empty: 'Sem conteúdo', none: 'Nenhuma lista'
+        ok: t('lista.ok'), expired: t('lista.expired'), blocked: t('lista.blocked'),
+        auth: t('lista.auth'), empty: t('lista.empty'), none: t('lista.none')
     };
 
     set('list-info-status', rotulos[state.listState] || '—');
     set('list-info-server', info ? info.server : '—');
     set('list-info-user', info && info.user ? info.user : '—');
-    set('list-info-exp', info && info.type === 'xtream' ? info.expLabel : 'Não informada (lista M3U)');
+    set('list-info-exp', info && info.type === 'xtream' ? info.expLabel : t('lista.nao_informada_m3u'));
     set('list-info-conns', info && info.maxConnections
         ? info.activeConnections + ' de ' + info.maxConnections
         : '—');
@@ -589,9 +599,14 @@ function setElementFocus(el) {
     state.focusedElement = el;
     el.classList.add('focused');
     
-    try {
-        el.focus();
-    } catch (e) {}
+    // Em <input>, chamar focus() faz a TV abrir o teclado na hora. Aqui a
+    // seleção é só visual (classe .focused); o teclado abre no OK, em
+    // handleRemoteKey.
+    if (el.tagName !== 'INPUT') {
+        try {
+            el.focus();
+        } catch (e) {}
+    }
 
     el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
@@ -606,9 +621,31 @@ function setElementFocus(el) {
 
     // Handle Netflix Card Change
     if (el.classList.contains('movie-poster-card')) {
+        revealRailOfCard(el);
         var data = el.dataset.item ? JSON.parse(el.dataset.item) : null;
         if (data) updateHeroSection(data);
     }
+}
+
+/**
+ * Rola a fileira INTEIRA para dentro da área visível, título junto.
+ * O scrollIntoView acima só garante o card; como o nome da categoria fica
+ * acima dele, ao descer com o controle o título ficava cortado para fora.
+ */
+function revealRailOfCard(card) {
+    var lista = card.parentNode;
+    var fileira = lista && lista.parentNode;
+    if (!fileira || !fileira.className || fileira.className.indexOf('rail-row') === -1) return;
+
+    var cont = document.getElementById('netflix-rails');
+    if (!cont) return;
+
+    var topoFileira = fileira.getBoundingClientRect().top;
+    var topoCont = cont.getBoundingClientRect().top;
+
+    // Encosta o topo da fileira no topo da área, com uma folga de respiro.
+    var alvo = cont.scrollTop + (topoFileira - topoCont) - 10;
+    cont.scrollTop = alvo < 0 ? 0 : alvo;
 }
 
 function focusDashboardItem(index) {
@@ -655,10 +692,10 @@ function renderLiveCategories() {
         card.tabIndex = 0;
         card.dataset.index = i;
         card.innerHTML = 
-            '<span class="category-folder-icon">' + (cat.name === '⭐ Favoritos' ? '⭐' : '📁') + '</span>' +
+            '<span class="category-folder-icon">' + (cat.name === t('live.favoritos') ? '⭐' : '📁') + '</span>' +
             '<div class="category-card-meta">' +
                 '<div class="category-card-name">' + cat.name + '</div>' +
-                '<div class="category-card-count">' + cat.count + ' canais</div>' +
+                '<div class="category-card-count">' + t('live.n_canais', { n: cat.count }) + '</div>' +
             '</div>';
         
         (function(cName) {
@@ -684,18 +721,18 @@ function openCategoryChannels(categoryName, searchQuery) {
                 filtered.push(s);
             }
         }
-    } else if (categoryName === '⭐ Favoritos') {
+    } else if (categoryName === t('live.favoritos')) {
         filtered = state.favorites;
     } else {
         for (var i = 0; i < state.channels.length; i++) {
             var s = state.channels[i];
-            if ((s.streamType === 'live' || !s.streamType) && (s.groupTitle || 'Geral') === categoryName) {
+            if ((s.streamType === 'live' || !s.streamType) && (s.groupTitle || t('live.geral')) === categoryName) {
                 filtered.push(s);
             }
         }
     }
     state.categoryChannels = filtered;
-    document.getElementById('selected-category-count').innerText = filtered.length + ' itens';
+    document.getElementById('selected-category-count').innerText = t('live.itens', { n: filtered.length });
 
     var grid = document.getElementById('category-channels-grid');
     grid.innerHTML = '';
@@ -725,7 +762,7 @@ function openCategoryChannels(categoryName, searchQuery) {
             '<img src="' + (ch.tvgLogo || '') + '" class="channel-card-logo" alt="" onerror="this.style.display=\'none\'">' +
             '<div class="channel-card-info">' +
                 '<div class="channel-card-title">' + ch.name + '</div>' +
-                '<div class="channel-card-sub">' + (ch.epgNow || ch.groupTitle || 'Ao Vivo') + '</div>' +
+                '<div class="channel-card-sub">' + (ch.epgNow || ch.groupTitle || t('player.transmissao')) + '</div>' +
             '</div>' +
             '<span class="btn-fav-icon ' + (isFav ? 'active' : '') + '">' + (isFav ? '❤️' : '🤍') + '</span>';
         
@@ -742,17 +779,104 @@ function openCategoryChannels(categoryName, searchQuery) {
     focusChannelItem(0);
 }
 
+// --------------------------------------------------------------------------
+// LAYOUT DO VOD: "Destaques" (trilhos) ou "Por Categoria" (pastas)
+// --------------------------------------------------------------------------
+
+/** Agrupa os títulos por categoria. Usado pelos dois layouts. */
+function buildVodGroups(type) {
+    var filtered = [];
+    for (var i = 0; i < state.streams.length; i++) {
+        if (state.streams[i].streamType === type) filtered.push(state.streams[i]);
+    }
+
+    var groups = {};
+    for (var j = 0; j < filtered.length; j++) {
+        var s = filtered[j];
+        var g = s.groupTitle || (type === 'movie' ? t('vod.filmes_destaque') : t('vod.series_populares'));
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(s);
+    }
+
+    state.vodCategories = groups;
+    state.vodCatNames = Object.keys(groups);
+    return filtered;
+}
+
+/**
+ * Busca enquanto digita. Redesenha só os trilhos, sem trocar de tela e sem
+ * tocar no foco — se trocasse de view, o teclado da TV fecharia a cada letra.
+ */
+var vodSearchTimer = null;
+
+function runVodSearch(termo) {
+    var q = String(termo || '').trim().toLowerCase();
+
+    // Termo apagado (ou curto demais): volta ao catálogo normal.
+    if (q.length < 2) {
+        buildVodGroups(state.vodType);
+        renderVodRails();
+        return;
+    }
+
+    var achados = [];
+    for (var i = 0; i < state.streams.length; i++) {
+        var s = state.streams[i];
+        if (s.streamType !== state.vodType) continue;
+        if (String(s.name).toLowerCase().indexOf(q) === -1) continue;
+        achados.push(s);
+        if (achados.length >= 60) break;   // catálogo tem mais de 20 mil itens
+    }
+
+    var railsContainer = document.getElementById('netflix-rails');
+    if (!railsContainer) return;
+
+    if (achados.length === 0) {
+        state.vodCategories = {};
+        state.vodCatNames = [];
+        state.renderedRails = 0;
+        state.renderedCardsPerRow = [];
+        railsContainer.innerHTML =
+            '<div class="rail-row"><h3 class="rail-title">' + t('vod.nada_encontrado', { q: termo }) + '</h3></div>';
+        return;
+    }
+
+    var rotulo = t(achados.length === 1 ? 'vod.resultado' : 'vod.resultados',
+                   { n: achados.length, q: termo }) +
+                 (achados.length >= 60 ? t('vod.primeiros') : '');
+
+    state.vodCategories = {};
+    state.vodCategories[rotulo] = achados;
+    state.vodCatNames = [rotulo];
+    renderVodRails();
+    updateHeroSection(achados[0]);
+}
+
+/** Só pinta qual opção está ativa, nos dois seletores da tela. */
+function markVodLayout(layout) {
+    var opts = document.querySelectorAll('.layout-opt');
+    for (var i = 0; i < opts.length; i++) {
+        opts[i].classList.toggle('is-on', opts[i].getAttribute('data-layout') === layout);
+    }
+}
+
+/** Troca de layout de verdade. */
+function setVodLayout(layout) {
+    if (layout === 'cats') {
+        buildVodGroups(state.vodType);
+        renderVodCategories();
+    } else {
+        openNetflixView(state.vodType);
+    }
+}
+
 function openNetflixView(type) {
     state.vodType = type;
+    markVodLayout('rails');
     var railsContainer = document.getElementById('netflix-rails');
     railsContainer.innerHTML = '';
 
-    var filteredStreams = [];
-    for (var i = 0; i < state.streams.length; i++) {
-        if (state.streams[i].streamType === type) {
-            filteredStreams.push(state.streams[i]);
-        }
-    }
+    var filteredStreams = buildVodGroups(type);
 
     var heroEl = document.getElementById('netflix-hero');
 
@@ -768,37 +892,39 @@ function openNetflixView(type) {
     }
     if (heroEl) heroEl.style.display = '';
 
-    var groups = {};
-    for (var j = 0; j < filteredStreams.length; j++) {
-        var s = filteredStreams[j];
-        var g = s.groupTitle || (type === 'movie' ? 'Filmes em Destaque' : 'Séries Populares');
-        if (!groups[g]) groups[g] = [];
-        groups[g].push(s);
-    }
-
-    state.vodCategories = groups;
-    state.vodCatNames = Object.keys(groups);
-    state.renderedRails = 0;
-    state.renderedCardsPerRow = [];
-
-    // Initial render: 5 rows
-    var maxInitialCats = Math.min(state.vodCatNames.length, 5);
-    for (var r = 0; r < maxInitialCats; r++) {
-        appendVodRow();
-    }
+    renderVodRails();
 
     if (filteredStreams.length > 0) {
         updateHeroSection(filteredStreams[0]);
     }
 
     switchView('view-netflix');
-    state.netflixRailIndex = 0;
-    state.netflixCardIndex = 0;
-    
+
     setTimeout(function() {
         var firstCard = document.querySelector('.movie-poster-card');
         if (firstCard) setElementFocus(firstCard);
     }, 50);
+}
+
+/**
+ * Desenha os trilhos a partir de state.vodCategories.
+ * Não troca de tela nem mexe no foco — é isso que permite a busca
+ * redesenhar os resultados sem fechar o teclado da TV.
+ */
+function renderVodRails() {
+    var railsContainer = document.getElementById('netflix-rails');
+    if (!railsContainer) return;
+    railsContainer.innerHTML = '';
+    state.renderedRails = 0;
+    state.renderedCardsPerRow = [];
+
+    var maxInitialCats = Math.min(state.vodCatNames.length, 5);
+    for (var r = 0; r < maxInitialCats; r++) {
+        appendVodRow();
+    }
+
+    state.netflixRailIndex = 0;
+    state.netflixCardIndex = 0;
 }
 
 function appendVodRow() {
@@ -846,7 +972,9 @@ function appendVodCards(rowIndex, count) {
         if (item.tvgLogo) {
             card.style.backgroundImage = 'url(\'' + item.tvgLogo + '\')';
         }
-        card.innerHTML = '<div class="movie-poster-title">' + item.name + '</div>';
+        // O <span> é necessário: o clamp de 2 linhas só funciona num elemento
+        // que não seja filho direto de flex nem posicionado em absoluto.
+        card.innerHTML = '<div class="movie-poster-title"><span>' + item.name + '</span></div>';
         
         (function(vodItem) {
             card.addEventListener('click', function() {
@@ -872,11 +1000,11 @@ function updateHeroSection(item) {
     
     // Set immediate basic info
     document.getElementById('hero-title').innerText = item.name;
-    document.getElementById('hero-plot').innerText = item.plot || 'Buscando informações do filme...';
+    document.getElementById('hero-plot').innerText = item.plot || t('vod.buscando_info');
     document.getElementById('hero-year').innerText = item.year || '';
-    document.getElementById('hero-duration').innerText = item.duration || (item.streamType === 'series' ? 'Série' : '');
-    document.getElementById('hero-cast').innerText = 'Elenco: ' + (item.cast || '...');
-    document.getElementById('hero-genre').innerText = 'Gênero: ' + (item.genre || item.groupTitle || 'Geral');
+    document.getElementById('hero-duration').innerText = item.duration || (item.streamType === 'series' ? t('serie.rotulo') : '');
+    document.getElementById('hero-cast').innerText = t('vod.elenco', { v: item.cast || '...' });
+    document.getElementById('hero-genre').innerText = t('vod.genero', { v: item.genre || item.groupTitle || t('live.geral') });
     
     var backdrop = document.getElementById('hero-backdrop');
     if (item.tvgLogo) {
@@ -903,11 +1031,11 @@ function fetchVodInfo(item) {
             .then(function(res) { return res.json(); })
             .then(function(data) {
                 if (data && data.info) {
-                    item.plot = data.info.plot || 'Nenhuma descrição disponível para este título.';
+                    item.plot = data.info.plot || t('vod.sem_descricao');
                     item.year = data.info.releasedate ? data.info.releasedate.split('-')[0] : (data.info.year || '');
                     item.durationSecs = data.info.duration_secs ? parseInt(data.info.duration_secs, 10) : 0;
                     item.duration = item.durationSecs ? Math.floor(item.durationSecs/60) + 'm' : (data.info.duration || '');
-                    item.cast = data.info.cast || 'Desconhecido.';
+                    item.cast = data.info.cast || t('vod.desconhecido');
                     item.genre = data.info.genre || item.groupTitle;
 
                     // Update Hero UI if still focused
@@ -915,8 +1043,8 @@ function fetchVodInfo(item) {
                         document.getElementById('hero-plot').innerText = item.plot;
                         document.getElementById('hero-year').innerText = item.year;
                         document.getElementById('hero-duration').innerText = item.duration;
-                        document.getElementById('hero-cast').innerText = 'Elenco: ' + item.cast;
-                        document.getElementById('hero-genre').innerText = 'Gênero: ' + item.genre;
+                        document.getElementById('hero-cast').innerText = t('vod.elenco', { v: item.cast });
+                        document.getElementById('hero-genre').innerText = t('vod.genero', { v: item.genre });
                     }
                     
                     // Update Player UI if this item is currently playing
@@ -936,11 +1064,12 @@ function fetchVodInfo(item) {
 function renderVodCategories() {
     var container = document.getElementById('vod-categories-list');
     if (!container) return;
+    markVodLayout('cats');
     container.innerHTML = '';
     
     var titleEl = document.querySelector('#view-vod-categories .sub-title');
     if (titleEl) {
-        titleEl.innerText = state.vodType === 'series' ? 'Pastas de Séries' : 'Pastas de Filmes';
+        titleEl.innerText = state.vodType === 'series' ? t('vod.pastas_series') : t('vod.pastas_filmes');
     }
 
     for (var i = 0; i < state.vodCatNames.length; i++) {
@@ -955,7 +1084,7 @@ function renderVodCategories() {
             '<span class="category-folder-icon">📁</span>' +
             '<div class="category-card-meta">' +
                 '<div class="category-card-name">' + catName + '</div>' +
-                '<div class="category-card-count">' + count + ' itens</div>' +
+                '<div class="category-card-count">' + t('live.itens', { n: count }) + '</div>' +
             '</div>';
         
         (function(cName) {
@@ -991,7 +1120,7 @@ function openVodCategory(categoryName, searchQuery) {
     }
     
     state.gridRenderedCount = 0;
-    document.getElementById('selected-vod-category-count').innerText = state.gridItems.length + ' itens';
+    document.getElementById('selected-vod-category-count').innerText = t('live.itens', { n: state.gridItems.length });
 
     var grid = document.getElementById('vod-items-grid');
     grid.innerHTML = '';
@@ -1020,7 +1149,7 @@ function appendVodGridCards(count) {
         if (item.tvgLogo) {
             card.style.backgroundImage = 'url(\'' + item.tvgLogo + '\')';
         }
-        card.innerHTML = '<div class="vod-grid-title">' + item.name + '</div>';
+        card.innerHTML = '<div class="vod-grid-title"><span>' + item.name + '</span></div>';
 
         (function(vodItem) {
             card.addEventListener('click', function() {
@@ -1042,9 +1171,9 @@ function openSeriesDetails(seriesItem) {
     state.currentSeries = seriesItem;
     document.getElementById('series-details-title').innerText = seriesItem.name;
     document.getElementById('series-hero-name').innerText = seriesItem.name;
-    document.getElementById('series-hero-plot').innerText = seriesItem.plot || 'Acompanhe todos os episódios no HeisenIPTV.';
-    document.getElementById('series-hero-cast').innerText = 'Elenco: ' + (seriesItem.cast || 'Elenco Principal');
-    document.getElementById('series-hero-genre').innerText = 'Gênero: ' + (seriesItem.genre || seriesItem.groupTitle || 'Série');
+    document.getElementById('series-hero-plot').innerText = seriesItem.plot || t('serie.acompanhe');
+    document.getElementById('series-hero-cast').innerText = t('vod.elenco', { v: seriesItem.cast || t('serie.elenco_principal') });
+    document.getElementById('series-hero-genre').innerText = t('vod.genero', { v: seriesItem.genre || seriesItem.groupTitle || t('serie.rotulo') });
     
     var coverImg = document.getElementById('series-cover-img');
     if (seriesItem.tvgLogo) {
@@ -1056,7 +1185,7 @@ function openSeriesDetails(seriesItem) {
 
     var tabsRow = document.getElementById('season-tabs-row');
     var grid = document.getElementById('episodes-grid');
-    tabsRow.innerHTML = '<span style="color:white; font-size:18px;">Carregando temporadas...</span>';
+    tabsRow.innerHTML = '<span style="color:white; font-size:18px;">' + t('serie.carregando_temporadas') + '</span>';
     grid.innerHTML = '';
     
     switchView('view-series-details');
@@ -1075,14 +1204,14 @@ function openSeriesDetails(seriesItem) {
                         var seasonKeys = Object.keys(data.episodes);
                         for (var k = 0; k < seasonKeys.length; k++) {
                             var sNum = seasonKeys[k];
-                            var sName = 'Temporada ' + sNum;
+                            var sName = t('serie.temporada', { n: sNum });
                             epsData[sName] = [];
                             var epsArray = data.episodes[sNum];
                             if (Array.isArray(epsArray)) {
                                 for (var e = 0; e < epsArray.length; e++) {
                                     var epObj = epsArray[e];
                                     epsData[sName].push({
-                                        title: epObj.title || 'Episódio ' + (e + 1),
+                                        title: epObj.title || t('serie.episodio', { n: e + 1 }),
                                         url: parsed.domain + '/series/' + parsed.user + '/' + parsed.pass + '/' + epObj.id + '.' + epObj.container_extension
                                     });
                                 }
@@ -1091,7 +1220,7 @@ function openSeriesDetails(seriesItem) {
                         
                         if (data.info) {
                             if (data.info.plot) document.getElementById('series-hero-plot').innerText = data.info.plot;
-                            if (data.info.cast) document.getElementById('series-hero-cast').innerText = 'Elenco: ' + data.info.cast;
+                            if (data.info.cast) document.getElementById('series-hero-cast').innerText = t('vod.elenco', { v: data.info.cast });
                         }
                         
                         state.seriesEpisodes = epsData;
@@ -1099,7 +1228,7 @@ function openSeriesDetails(seriesItem) {
                     }
                 })
                 .catch(function(e) {
-                    tabsRow.innerHTML = '<span style="color:red; font-size:18px;">Erro ao carregar episódios.</span>';
+                    tabsRow.innerHTML = '<span style="color:red; font-size:18px;">' + t('serie.erro_episodios') + '</span>';
                 });
             return;
         }
@@ -1107,8 +1236,8 @@ function openSeriesDetails(seriesItem) {
 
     // Fallback for M3U series or missing Xtream API
     var episodesData = seriesItem.episodes || {
-        "Temporada 1": [
-            { title: "Episódio 1: Piloto", url: seriesItem.url || '' }
+        [t('serie.temporada', { n: 1 })]: [
+            { title: t('serie.piloto'), url: seriesItem.url || '' }
         ]
     };
     state.seriesEpisodes = episodesData;
@@ -1162,7 +1291,7 @@ function renderSeasonEpisodes(seasonName) {
         card.tabIndex = 0;
         card.innerHTML = 
             '<span class="episode-num">E' + (i + 1) + '</span>' +
-            '<span class="episode-name">' + (ep.title || 'Episódio ' + (i + 1)) + '</span>';
+            '<span class="episode-name">' + (ep.title || t('serie.episodio', { n: i + 1 })) + '</span>';
         
         (function(epItem) {
             card.addEventListener('click', function() {
@@ -1186,7 +1315,7 @@ function renderSeasonEpisodes(seasonName) {
 function playChannelFullscreen(channel) {
     state.currentChannel = channel;
     document.getElementById('player-channel-name').innerText = channel.name;
-    document.getElementById('player-epg-now').innerText = channel.epgNow || channel.plot || 'Transmissão Ao Vivo';
+    document.getElementById('player-epg-now').innerText = channel.epgNow || channel.plot || t('player.transmissao');
     
     var isVod = channel.streamType === 'movie' || channel.streamType === 'series';
     
@@ -1326,7 +1455,7 @@ function handleRemoteKey(e) {
     if (code === 10009 || code === 27 || key === 'Escape' || key === 'XF86Back') {
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('VOLTAR');
+        showKeyFeedback(t('tecla.voltar'));
         handleBackKey();
         return;
     }
@@ -1335,14 +1464,19 @@ function handleRemoteKey(e) {
     if (code === 13 || key === 'Enter' || key === 'Select') {
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('OK');
+        showKeyFeedback(t('tecla.ok'));
         if (state.currentView === 'player-view') {
             if (state.currentChannel && (state.currentChannel.streamType === 'movie' || state.currentChannel.streamType === 'series')) {
                 toggleVodPlayPause();
             }
             showPlayerOSD();
         } else if (state.focusedElement) {
-            state.focusedElement.click();
+            // Num campo de texto, OK é o que abre o teclado da TV.
+            if (state.focusedElement.tagName === 'INPUT') {
+                try { state.focusedElement.focus(); } catch (e) {}
+            } else {
+                state.focusedElement.click();
+            }
         }
         return;
     }
@@ -1351,7 +1485,7 @@ function handleRemoteKey(e) {
     if (code === 415 || code === 10252) { // MediaPlay / MediaPlayPause
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('PLAY');
+        showKeyFeedback(t('tecla.play'));
         if (state.currentView === 'player-view') {
             player.resume();
             document.getElementById('vod-play-icon').innerText = '▶';
@@ -1361,7 +1495,7 @@ function handleRemoteKey(e) {
     } else if (code === 19) { // MediaPause
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('PAUSE');
+        showKeyFeedback(t('tecla.pause'));
         if (state.currentView === 'player-view') {
             player.pause();
             document.getElementById('vod-play-icon').innerText = '⏸';
@@ -1371,7 +1505,7 @@ function handleRemoteKey(e) {
     } else if (code === 417 || code === 10233) { // MediaFastForward
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('AVANÇAR');
+        showKeyFeedback(t('tecla.avancar'));
         if (state.currentView === 'player-view' && state.currentChannel && (state.currentChannel.streamType === 'movie' || state.currentChannel.streamType === 'series')) {
             handleNavigate('right');
         }
@@ -1379,7 +1513,7 @@ function handleRemoteKey(e) {
     } else if (code === 412 || code === 10232) { // MediaRewind
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('VOLTAR');
+        showKeyFeedback(t('tecla.voltar'));
         if (state.currentView === 'player-view' && state.currentChannel && (state.currentChannel.streamType === 'movie' || state.currentChannel.streamType === 'series')) {
             handleNavigate('left');
         }
@@ -1390,27 +1524,27 @@ function handleRemoteKey(e) {
     if (code === 37 || key === 'ArrowLeft' || key === 'Left') {
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('◄ ESQUERDA');
+        showKeyFeedback(t('tecla.esquerda'));
         handleNavigate('left');
     } else if (code === 38 || key === 'ArrowUp' || key === 'Up') {
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('▲ CIMA');
+        showKeyFeedback(t('tecla.cima'));
         handleNavigate('up');
     } else if (code === 39 || key === 'ArrowRight' || key === 'Right') {
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('► DIREITA');
+        showKeyFeedback(t('tecla.direita'));
         handleNavigate('right');
     } else if (code === 40 || key === 'ArrowDown' || key === 'Down') {
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('▼ BAIXO');
+        showKeyFeedback(t('tecla.baixo'));
         handleNavigate('down');
     } else if (code === 403) { // Red Color Key
         e.preventDefault();
         e.stopPropagation();
-        showKeyFeedback('● FAVORITO');
+        showKeyFeedback(t('tecla.favorito'));
         if (state.currentView === 'player-view') {
             toggleFavorite(state.currentChannel);
         } else if (state.currentView === 'view-category-channels') {
@@ -1680,25 +1814,35 @@ function navigateChannels(dir) {
 function navigateNetflix(dir) {
     var backBtn = document.querySelector('#view-netflix .btn-back');
     var searchInput = document.getElementById('vod-search-input');
-    var filterBtn = document.getElementById('btn-vod-filter');
+    var railsOpt = document.querySelector('#view-netflix .layout-opt[data-layout="rails"]');
+    var catsOpt = document.querySelector('#view-netflix .layout-opt[data-layout="cats"]');
     var heroBtn = document.getElementById('btn-hero-play');
     var rows = document.querySelectorAll('.rail-row');
 
+    // Barra de cima, da esquerda para a direita:
+    // voltar -> Destaques -> Por Categoria -> busca. De qualquer uma, baixo vai ao hero.
     if (state.focusedElement === backBtn) {
-        if (dir === 'right') setElementFocus(searchInput);
+        if (dir === 'right') setElementFocus(railsOpt);
+        else if (dir === 'down') setElementFocus(heroBtn);
+        return;
+    }
+
+    if (state.focusedElement === railsOpt) {
+        if (dir === 'left') setElementFocus(backBtn);
+        else if (dir === 'right') setElementFocus(catsOpt);
+        else if (dir === 'down') setElementFocus(heroBtn);
+        return;
+    }
+
+    if (state.focusedElement === catsOpt) {
+        if (dir === 'left') setElementFocus(railsOpt);
+        else if (dir === 'right') setElementFocus(searchInput);
         else if (dir === 'down') setElementFocus(heroBtn);
         return;
     }
 
     if (state.focusedElement === searchInput) {
-        if (dir === 'left') setElementFocus(backBtn);
-        else if (dir === 'right') setElementFocus(filterBtn);
-        else if (dir === 'down') setElementFocus(heroBtn);
-        return;
-    }
-
-    if (state.focusedElement === filterBtn) {
-        if (dir === 'left') setElementFocus(searchInput);
+        if (dir === 'left') setElementFocus(catsOpt);
         else if (dir === 'down') setElementFocus(heroBtn);
         return;
     }
@@ -1766,13 +1910,32 @@ function navigateNetflix(dir) {
 // --------------------------------------------------------------------------
 function navigateVodCategories(dir) {
     var backBtn = document.querySelector('#view-vod-categories .btn-back');
+    var railsOpt = document.querySelector('#view-vod-categories .layout-opt[data-layout="rails"]');
+    var catsOpt = document.querySelector('#view-vod-categories .layout-opt[data-layout="cats"]');
     var cards = document.querySelectorAll('#view-vod-categories .category-card');
-    if (cards.length === 0) return;
 
+    // O cabeçalho é tratado antes da guarda de lista vazia: mesmo sem pastas,
+    // o usuário precisa conseguir voltar para os Destaques.
     if (state.focusedElement === backBtn) {
-        if (dir === 'down') setElementFocus(cards[0]);
+        if (dir === 'right') setElementFocus(railsOpt);
+        else if (dir === 'down' && cards.length) setElementFocus(cards[0]);
         return;
     }
+
+    if (state.focusedElement === railsOpt) {
+        if (dir === 'left') setElementFocus(backBtn);
+        else if (dir === 'right') setElementFocus(catsOpt);
+        else if (dir === 'down' && cards.length) setElementFocus(cards[0]);
+        return;
+    }
+
+    if (state.focusedElement === catsOpt) {
+        if (dir === 'left') setElementFocus(railsOpt);
+        else if (dir === 'down' && cards.length) setElementFocus(cards[0]);
+        return;
+    }
+
+    if (cards.length === 0) return;
 
     var cur = -1;
     for (var i = 0; i < cards.length; i++) {
@@ -1966,17 +2129,29 @@ function navigatePlaylists(dir) {
 function navigateSettings(dir) {
     var backBtn = document.querySelector('#view-settings .btn-back');
     var discBtn = document.getElementById('btn-settings-disconnect');
-    
+    var langs = document.querySelectorAll('#view-settings .lang-opt');
+
+    // voltar -> idiomas (troca com esquerda/direita) -> botão de desconectar
     if (state.focusedElement === backBtn) {
-        if (dir === 'down' && discBtn) {
-            setElementFocus(discBtn);
-        }
+        if (dir === 'down' && langs.length) setElementFocus(langs[0]);
+        else if (dir === 'down' && discBtn) setElementFocus(discBtn);
         return;
     }
-    
+
+    for (var i = 0; i < langs.length; i++) {
+        if (state.focusedElement !== langs[i]) continue;
+        if (dir === 'right' && i + 1 < langs.length) setElementFocus(langs[i + 1]);
+        else if (dir === 'left' && i > 0) setElementFocus(langs[i - 1]);
+        else if (dir === 'left') setElementFocus(backBtn);
+        else if (dir === 'up') setElementFocus(backBtn);
+        else if (dir === 'down' && discBtn) setElementFocus(discBtn);
+        return;
+    }
+
     if (state.focusedElement === discBtn) {
         if (dir === 'up') {
-            setElementFocus(backBtn);
+            if (langs.length) setElementFocus(langs[0]);
+            else setElementFocus(backBtn);
         }
         return;
     }
@@ -1994,7 +2169,8 @@ function handleBackKey() {
         focusCategoryItem(state.catIndex);
     } else if (state.currentView === 'view-vod-categories') {
         switchView('view-netflix');
-        var first = document.querySelector('#btn-vod-filter');
+        markVodLayout('rails');
+        var first = document.querySelector('#view-netflix .layout-opt[data-layout="cats"]');
         if (first) setElementFocus(first);
     } else if (state.currentView === 'view-vod-grid') {
         switchView('view-vod-categories');
@@ -2082,32 +2258,57 @@ function attachHandlers() {
             }
         });
         liveSearch.addEventListener('keydown', function(e) {
-            if (e.keyCode === 13 || e.key === 'Enter') { e.preventDefault(); this.blur(); }
+            if (e.keyCode === 13 || e.key === 'Enter') {
+                e.preventDefault();
+                // Sem isto o handler global veria o Enter e reabriria o teclado.
+                e.stopPropagation();
+                this.blur();
+            }
         });
     }
 
     var vodSearch = document.getElementById('vod-search-input');
     if (vodSearch) {
-        vodSearch.addEventListener('change', function() {
-            if (this.value.trim() !== '') {
-                openVodCategory('Busca: ' + this.value, this.value);
-                switchView('view-vod-grid');
-            } else {
-                switchView('view-netflix');
-                openNetflixView(state.vodType);
-            }
+        // "input" dispara a cada tecla; "change" só disparava ao fechar o
+        // teclado, que era o motivo de o resultado só aparecer no fim.
+        vodSearch.addEventListener('input', function() {
+            var termo = this.value;
+            clearTimeout(vodSearchTimer);
+            vodSearchTimer = setTimeout(function() {
+                runVodSearch(termo);
+            }, 300);   // respira entre teclas: são 20 mil títulos por varredura
         });
+
         vodSearch.addEventListener('keydown', function(e) {
-            if (e.keyCode === 13 || e.key === 'Enter') { e.preventDefault(); this.blur(); }
+            if (e.keyCode === 13 || e.key === 'Enter') {
+                e.preventDefault();
+                // Impede o handler global de ver este Enter e reabrir o teclado.
+                e.stopPropagation();
+                clearTimeout(vodSearchTimer);
+                runVodSearch(this.value);
+                this.blur();
+            }
         });
     }
 
-    // VOD Filter
-    var vodFilterBtn = document.getElementById('btn-vod-filter');
-    if (vodFilterBtn) {
-        vodFilterBtn.addEventListener('click', function() {
-            renderVodCategories();
-        });
+    // Seletor de idioma (Configurações)
+    var langOpts = document.querySelectorAll('.lang-opt');
+    for (var G = 0; G < langOpts.length; G++) {
+        (function(btn) {
+            btn.addEventListener('click', function() {
+                trocarIdioma(btn.getAttribute('data-lang'));
+            });
+        })(langOpts[G]);
+    }
+
+    // Seletor de layout do VOD (existe nas duas telas)
+    var layoutOpts = document.querySelectorAll('.layout-opt');
+    for (var L = 0; L < layoutOpts.length; L++) {
+        (function(btn) {
+            btn.addEventListener('click', function() {
+                setVodLayout(btn.getAttribute('data-layout'));
+            });
+        })(layoutOpts[L]);
     }
 
     // Demo Playlist
@@ -2115,7 +2316,7 @@ function attachHandlers() {
     if (demoBtn) {
         demoBtn.addEventListener('click', function() {
             loadStreams(DEMO_CHANNELS);
-            showToast('Lista Demo Brasil carregada com sucesso!');
+            showToast(t('toast.demo_ok'));
             switchView('view-dashboard');
             focusDashboardItem(0);
         });
@@ -2129,7 +2330,7 @@ function attachHandlers() {
             localStorage.removeItem('flux_credentials');
             state.channels = [];
             state.streams = [];
-            showToast('Playlist desconectada com sucesso.');
+            showToast(t('toast.desconectada'));
             loadStreams(DEMO_CHANNELS);
             switchView('view-dashboard');
             focusDashboardItem(0);
@@ -2155,7 +2356,7 @@ function attachHandlers() {
             if (dom && usr && pwd) {
                 connectXtream(dom, usr, pwd);
             } else {
-                showToast('Preencha Servidor, Usuário e Senha.');
+                showToast(t('toast.preencha_xtream'));
             }
         });
     }
@@ -2167,7 +2368,7 @@ function attachHandlers() {
             // Volta para a tela de ativação forçando um refresh na UI (não apaga Firebase, apenas local)
             // Se o firebase permitir, a TV pode reconectar ou o user pode colocar dados novos
             // Para "limpar" de fato o banco de dados via TV não faremos aqui, mas limparemos os dados na TV para pedir ativação de novo
-            showToast('Dados locais apagados.');
+            showToast(t('toast.dados_apagados'));
             
             // Pausa polling para evitar loop
             clearInterval(macAuthTimer);
@@ -2179,11 +2380,11 @@ function attachHandlers() {
             var expTitle = document.querySelector('#view-activation .brand-title');
             var expMsg = document.querySelector('#view-activation p');
             if (expTitle) {
-                expTitle.innerText = 'Desconectado';
+                expTitle.innerText = t('ativacao.desconectado');
                 expTitle.style.color = '#fff';
             }
             if (expMsg) {
-                expMsg.innerHTML = 'Acesse o portal e ative este dispositivo novamente.';
+                expMsg.innerHTML = t('ativacao.desconectado_msg');
             }
             
             switchView('view-activation');
@@ -2201,7 +2402,7 @@ function attachHandlers() {
 }
 
 function loadM3U(url) {
-    showToast('Carregando lista M3U...');
+    showToast(t('toast.carregando_m3u'));
     fetch(url)
         .then(function(r) { return r.text(); })
         .then(function(data) {
@@ -2213,7 +2414,7 @@ function loadM3U(url) {
                 user: '',
                 status: '',
                 expMs: 0,
-                expLabel: 'Não informada',
+                expLabel: t('lista.nao_informada'),
                 maxConnections: '',
                 activeConnections: '',
                 checkedAt: new Date().toISOString()
@@ -2223,7 +2424,7 @@ function loadM3U(url) {
                 localStorage.setItem('flux_m3u_url', url);
                 setListState('ok', infoM3U);
                 loadStreams(parsed);
-                showToast(parsed.length + ' canais carregados!');
+                showToast(t('toast.canais_ok', { n: parsed.length }));
                 switchView('view-dashboard');
                 focusDashboardItem(0);
             } else {
@@ -2238,7 +2439,7 @@ function loadM3U(url) {
         .catch(function(err) {
             console.error(err);
             setListState('auth', null);
-            showToast('Não foi possível baixar a lista. Verifique o link com o seu provedor.');
+            showToast(t('toast.erro_baixar'));
         });
 }
 
@@ -2255,7 +2456,7 @@ function parseM3U(content) {
             var group = line.match(/group-title="([^"]+)"/i);
             var parts = line.split(',');
             cur.tvgLogo = logo ? logo[1] : '';
-            cur.groupTitle = group ? group[1] : 'Geral';
+            cur.groupTitle = group ? group[1] : t('live.geral');
             cur.name = parts.length > 1 ? parts[1].trim() : 'Canal ' + (channels.length + 1);
             
             // Detect stream type
@@ -2279,7 +2480,7 @@ function parseM3U(content) {
 }
 
 function connectXtream(domain, user, pass) {
-    showToast('Conectando ao servidor Xtream Codes...');
+    showToast(t('toast.conectando_xtream'));
     if (domain.indexOf('http://') !== 0 && domain.indexOf('https://') !== 0) {
         domain = 'http://' + domain;
     }
@@ -2312,7 +2513,7 @@ function connectXtream(domain, user, pass) {
 
             if (state.listState === 'ok') {
                 localStorage.setItem('flux_credentials', JSON.stringify({ domain: domain, user: user, pass: pass }));
-                showToast('Login Xtream realizado com sucesso!');
+                showToast(t('toast.login_ok'));
 
                 // Fetch Live, VOD, Series Streams and Series Categories
                 var urlLive = domain + '/player_api.php?username=' + user + '&password=' + pass + '&action=get_live_streams';
@@ -2395,7 +2596,7 @@ function connectXtream(domain, user, pass) {
 
                     if (parsed.length > 0) {
                         loadStreams(parsed);
-                        showToast(parsed.length + ' canais e filmes carregados!');
+                        showToast(t('toast.tudo_ok', { n: parsed.length }));
                     } else {
                         // Painel autorizou, mas não devolveu conteúdo nenhum.
                         setListState('empty', state.listInfo);
@@ -2409,7 +2610,7 @@ function connectXtream(domain, user, pass) {
         })
         .catch(function(err) {
             console.error(err);
-            showToast('Erro ao autenticar no servidor.');
+            showToast(t('toast.erro_auth'));
         });
 }
 
@@ -2425,15 +2626,38 @@ function toggleFavorite(channel) {
 
     if (idx >= 0) {
         state.favorites.splice(idx, 1);
-        showToast('Removido dos favoritos: ' + channel.name);
+        showToast(t('toast.fav_rem', { v: channel.name }));
     } else {
         state.favorites.push(channel);
-        showToast('Adicionado aos favoritos: ' + channel.name);
+        showToast(t('toast.fav_add', { v: channel.name }));
     }
     localStorage.setItem('flux_favorites', JSON.stringify(state.favorites));
-    if (state.currentView === 'view-category-channels' && state.selectedCategory === '⭐ Favoritos') {
-        openCategoryChannels('⭐ Favoritos');
+    if (state.currentView === 'view-category-channels' && state.selectedCategory === t('live.favoritos')) {
+        openCategoryChannels(t('live.favoritos'));
     }
+}
+
+/** Marca visualmente qual idioma está ativo. */
+function marcarIdiomaAtivo() {
+    var opts = document.querySelectorAll('.lang-opt');
+    for (var i = 0; i < opts.length; i++) {
+        opts[i].classList.toggle('is-on', opts[i].getAttribute('data-lang') === I18N.lang);
+    }
+}
+
+/**
+ * Troca o idioma e redesenha o que foi montado por JavaScript.
+ * O HTML estático o próprio I18N.apply() resolve; o resto (categorias,
+ * trilhos, rótulos da lista) precisa ser remontado com os textos novos.
+ */
+function trocarIdioma(lang) {
+    I18N.set(lang);
+    marcarIdiomaAtivo();
+    renderListInfoSettings();
+    if (state.streams && state.streams.length) {
+        loadStreams(state.streams);
+    }
+    showToast(t('config.idioma') + ': ' + I18N.t('idioma.nome'));
 }
 
 function showToast(msg) {
