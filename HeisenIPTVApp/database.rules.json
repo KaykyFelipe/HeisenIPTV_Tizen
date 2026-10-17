@@ -1,0 +1,71 @@
+{
+  /*
+    Regras do Realtime Database do HeisenIPTV.
+
+    ATENÇÃO AO PRINCÍPIO QUE GOVERNA ESTE ARQUIVO:
+    permissão no Firebase CASCATEIA PARA BAIXO e NÃO PODE SER REVOGADA por um
+    filho. Se houver ".write": true em devices/$mac, todo campo abaixo fica
+    gravável e as restrições deste arquivo viram letra morta.
+
+    Por isso $mac NÃO concede escrita. Cada campo gravável concede a sua, e o
+    que não está listado aqui só o Admin SDK (Cloud Functions) escreve.
+  */
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "devices": {
+      /* Sem permissão aqui: impede listar/baixar a base inteira. */
+      ".read": false,
+      ".write": false,
+
+      "$mac": {
+        /* O aparelho e o portal leem o próprio registro sem autenticar.
+           O "segredo" é o MAC -- veja a ressalva no README. */
+        ".read": true,
+
+        /* --- Campos que o aplicativo da TV escreve --- */
+        "mac":       { ".write": true, ".validate": "newData.isString() && newData.val().length <= 64" },
+        "deviceKey": { ".write": true, ".validate": "newData.isString() && newData.val().length <= 64" },
+        "status":    { ".write": true, ".validate": "newData.isString() && newData.val().length <= 32" },
+        "updatedAt": { ".write": true, ".validate": "newData.isString() || newData.isNumber()" },
+
+        "listInfo": {
+          ".write": true,
+          "$campo": { ".validate": "!newData.hasChildren()" }
+        },
+
+        /* --- Listas, escritas pelo portal e pela TV --- */
+        "playlists": {
+          ".write": true,
+          "$id": {
+            ".validate": "newData.hasChildren(['name'])",
+            "name":  { ".validate": "newData.isString() && newData.val().length <= 120" },
+            "type":  { ".validate": "newData.isString() && newData.val().length <= 16" },
+            "$resto": { ".validate": true }
+          }
+        },
+        "activePlaylistId": { ".write": true, ".validate": "newData.isString() && newData.val().length <= 64" },
+        "playlist":         { ".write": true },
+
+        /* --- Campos de cobrança ---
+           trialStartDate e isPaid só podem ser CRIADOS, nunca alterados: isso
+           impede reiniciar o teste grátis ou se auto-liberar como pago.
+           Depois de existirem, só a Cloud Function muda. */
+        "trialStartDate": {
+          ".write": "!data.exists()",
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        },
+        "isPaid": {
+          ".write": "!data.exists()",
+          ".validate": "newData.val() === false"
+        },
+
+        /* expirationDate e paymentDate não aparecem aqui de propósito:
+           sem regra de escrita, só o Admin SDK grava. */
+
+        "$resto": { ".validate": true }
+      }
+    }
+  }
+}
